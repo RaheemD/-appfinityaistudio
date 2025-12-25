@@ -2,6 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Target, Award, Heart, Lightbulb, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import aboutHeroSvg from "@/assets/about-hero.svg";
 
 const About = () => {
   const values = [
@@ -65,7 +66,7 @@ const About = () => {
 
               <div className="relative">
                 <img
-                  src="/src/assets/about-hero.svg"
+                  src={aboutHeroSvg}
                   alt="About Appfinity AI Studio"
                   className="w-full h-auto rounded-2xl"
                 />
