@@ -9,6 +9,11 @@ interface Message {
     timestamp: Date;
 }
 
+type AIResponse = {
+    content: string;
+    closeChat?: boolean;
+};
+
 const QUICK_ACTIONS = [
     "Tell me about your services",
     "View products",
@@ -37,55 +42,114 @@ export const AIChatbot = () => {
         scrollToBottom();
     }, [messages]);
 
-    const getAIResponse = async (userMessage: string): Promise<string> => {
+    const getAIResponse = async (userMessage: string): Promise<AIResponse> => {
         // Simulate AI processing
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         const lowerMessage = userMessage.toLowerCase();
+        const normalized = lowerMessage.replace(/[^a-z0-9\s']/g, " ").replace(/\s+/g, " ").trim();
+
+        const isEndIntent =
+            /^(nothing|no|nope|nah|done|all good|all set|close|exit|quit|bye|goodbye)$/.test(normalized) ||
+            /^(no (thanks|thank you))$/.test(normalized) ||
+            /^(that'?s all)$/.test(normalized);
+
+        if (isEndIntent) {
+            return {
+                content: "Got it — thanks for chatting. If you need anything later, just open this chat again.",
+                closeChat: true,
+            };
+        }
+
+        if (/^(thanks|thank you|thx|ty|appreciate it)$/.test(normalized) || normalized.includes("thank")) {
+            return {
+                content: "You're welcome! If anything comes up later, I’m here.",
+            };
+        }
+
+        const isUncertainIntent =
+            /^(not sure|unsure|i'?m not sure|don'?t know|do not know|no idea|not really|maybe|it depends)$/.test(normalized) ||
+            normalized.includes("did not think about") ||
+            normalized.includes("didn't think about") ||
+            normalized.includes("havent thought about") ||
+            normalized.includes("haven't thought about");
+
+        if (isUncertainIntent) {
+            return {
+                content:
+                    "No problem — we can narrow it down quickly.\n\nWhich best matches what you want?\n• Build an AI-powered app\n• Website / SaaS product\n• Mobile app\n• Automations & AI integrations\n\nReply with one of these (or tell me your industry), and I’ll guide you from there.",
+            };
+        }
 
         // Context-aware responses based on your business
         if (lowerMessage.includes("service") || lowerMessage.includes("what do you do")) {
-            return "We offer 6 core services:\n\n• AI-Powered Application Development\n• Web & SaaS Development\n• Mobile App Development (Android & iOS)\n• Automation & AI Integrations\n• Custom Digital Solutions\n• UI/UX Design & Prototyping\n\nWhich area interests you most?";
+            return {
+                content:
+                    "We offer 6 core services:\n\n• AI-Powered Application Development\n• Web & SaaS Development\n• Mobile App Development (Android & iOS)\n• Automation & AI Integrations\n• Custom Digital Solutions\n• UI/UX Design & Prototyping\n\nWhich area interests you most?",
+            };
         }
 
         if (lowerMessage.includes("product") || lowerMessage.includes("portfolio")) {
-            return "We've built some exciting products:\n\n🏋️ FitnessMate - AI-powered workout and nutrition platform\n🎬 Next Frame Casting - Talent coordination and casting platform\n\nWould you like to learn more about either of these?";
+            return {
+                content:
+                    "We've built some exciting products:\n\n🏋️ FitnessMate - AI-powered workout and nutrition platform\n🎬 Next Frame Casting - Talent coordination and casting platform\n\nWould you like to learn more about either of these?",
+            };
         }
 
         if (lowerMessage.includes("price") || lowerMessage.includes("cost") || lowerMessage.includes("pricing")) {
-            return "Our pricing varies based on project scope and requirements. We offer:\n\n• Fixed-price projects\n• Hourly consulting\n• Retainer agreements\n\nI'd recommend scheduling a free consultation to discuss your specific needs. Would you like me to direct you to our contact page?";
+            return {
+                content:
+                    "Our pricing varies based on project scope and requirements. We offer:\n\n• Fixed-price projects\n• Hourly consulting\n• Retainer agreements\n\nI'd recommend scheduling a free consultation to discuss your specific needs. Would you like me to direct you to our contact page?",
+            };
         }
 
         if (lowerMessage.includes("contact") || lowerMessage.includes("schedule") || lowerMessage.includes("call")) {
-            return "Great! You can reach us at:\n\n📧 appfinity.ai.studio@gmail.com\n📞 +91 93213 64060\n\nOr visit our Contact page to send us a message directly. We typically respond within 1-2 business days.";
+            return {
+                content:
+                    "Great! You can reach us at:\n\n📧 appfinity.ai.studio@gmail.com\n📞 +91 93213 64060\n\nOr visit our Contact page to send us a message directly. We typically respond within 1-2 business days.",
+            };
         }
 
-        if (lowerMessage.includes("ai") || lowerMessage.includes("artificial intelligence")) {
-            return "AI is at the core of what we do! We specialize in:\n\n✨ Building AI-powered applications\n🤖 Integrating AI into existing systems\n🧠 Creating intelligent automation\n📊 Delivering data-driven insights\n\nWe use cutting-edge AI technologies to solve real business problems. What's your AI use case?";
+        if (/\bai\b/.test(normalized) || normalized.includes("artificial intelligence")) {
+            return {
+                content:
+                    "AI is at the core of what we do! We specialize in:\n\n✨ Building AI-powered applications\n🤖 Integrating AI into existing systems\n🧠 Creating intelligent automation\n📊 Delivering data-driven insights\n\nWe use cutting-edge AI technologies to solve real business problems. What's your AI use case?",
+            };
         }
 
-        if (lowerMessage.includes("mobile") || lowerMessage.includes("app")) {
-            return "We build high-performance native mobile apps for both Android and iOS! Our apps focus on:\n\n• Performance & UX\n• Offline capabilities\n• Platform-specific features\n• Seamless integrations\n\nCheck out FitnessMate on the Google Play Store as an example of our work!";
+        if (/\bmobile\b/.test(normalized) || /\b(app|apps)\b/.test(normalized) || /\bandroid\b/.test(normalized) || /\bios\b/.test(normalized)) {
+            return {
+                content:
+                    "We build high-performance native mobile apps for both Android and iOS! Our apps focus on:\n\n• Performance & UX\n• Offline capabilities\n• Platform-specific features\n• Seamless integrations\n\nCheck out FitnessMate on the Google Play Store as an example of our work!",
+            };
         }
 
         if (lowerMessage.includes("web") || lowerMessage.includes("website")) {
-            return "We create modern web platforms and SaaS products with:\n\n🚀 Scalable architectures\n🔒 Strong security\n⚡ Fast performance\n📱 Responsive design\n\nWe use React, TypeScript, and modern tools to build production-ready applications.";
+            return {
+                content:
+                    "We create modern web platforms and SaaS products with:\n\n🚀 Scalable architectures\n🔒 Strong security\n⚡ Fast performance\n📱 Responsive design\n\nWe use React, TypeScript, and modern tools to build production-ready applications.",
+            };
         }
 
         if (lowerMessage.includes("experience") || lowerMessage.includes("who are you")) {
-            return "Appfinity AI Studio is a technology studio with 2+ years of experience building intelligent digital products. We've delivered 10+ projects including web platforms, mobile apps, and AI solutions. We're passionate about creating technology that solves real problems!";
+            return {
+                content:
+                    "Appfinity AI Studio is a technology studio with 2+ years of experience building intelligent digital products. We've delivered 10+ projects including web platforms, mobile apps, and AI solutions. We're passionate about creating technology that solves real problems!",
+            };
         }
 
-        if (lowerMessage.includes("hello") || lowerMessage.includes("hi") || lowerMessage.includes("hey")) {
-            return "Hello! 👋 How can I help you today? Feel free to ask about our services, products, or anything else!";
-        }
-
-        if (lowerMessage.includes("thank") || lowerMessage.includes("thanks")) {
-            return "You're very welcome! Feel free to reach out anytime. Is there anything else I can help you with?";
+        if (/\b(hello|hi|hey)\b/.test(normalized)) {
+            return {
+                content:
+                    "Hello! 👋 How can I help you today? Feel free to ask about our services, products, or anything else!",
+            };
         }
 
         // Default intelligent response
-        return "That's a great question! While I can provide information about our services, products, and general inquiries, I'd recommend reaching out to our team directly for more specific discussions.\n\nYou can:\n• Email us at appfinity.ai.studio@gmail.com\n• Call +91 93213 64060\n• Use our contact form\n\nIs there anything else I can help you with?";
+        return {
+            content:
+                "That's a great question! While I can provide information about our services, products, and general inquiries, I'd recommend reaching out to our team directly for more specific discussions.\n\nYou can:\n• Email us at appfinity.ai.studio@gmail.com\n• Call +91 93213 64060\n• Use our contact form\n\nIs there anything else I can help you with?",
+        };
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -106,12 +170,16 @@ export const AIChatbot = () => {
 
         const assistantMessage: Message = {
             role: "assistant",
-            content: response,
+            content: response.content,
             timestamp: new Date(),
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
         setIsTyping(false);
+
+        if (response.closeChat) {
+            window.setTimeout(() => setIsOpen(false), 1200);
+        }
     };
 
     const handleQuickAction = (action: string) => {
