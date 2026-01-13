@@ -187,7 +187,7 @@ const Privacy = () => {
                     href="mailto:support@appfinity.ai"
                     className="text-primary hover:underline font-medium"
                   >
-                    appfinity.ai.studio@gmail.com
+                    info@appfinityaistudio.com
                   </a>
                   
                 </p>
