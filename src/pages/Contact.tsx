@@ -98,7 +98,7 @@ const Contact = () => {
                       href="mailto:appfinity.ai.studio@gmail.com"
                       className="text-muted-foreground hover:text-primary transition-colors duration-200 link-underline"
                     >
-                      appfinity.ai.studio@gmail.com
+                      info@appfinityaistudio.com
                     </a>
                   </div>
                 </div>
@@ -126,8 +126,8 @@ const Contact = () => {
                     <h3 className="font-semibold text-foreground mb-1">Address</h3>
                     <address className="text-muted-foreground not-italic leading-relaxed">
                       Appfinity AI Studio<br />
-                      S.V. Road, Dahisar East<br />
-                      Mumbai 400068<br />
+                      Heaven Plaza, S.V. Road<br />
+                      Dahisar, Mumbai 400068<br />
                       Maharashtra, India
                     </address>
                   </div>
