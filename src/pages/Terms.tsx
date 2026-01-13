@@ -124,7 +124,7 @@ const Terms = () => {
                 <p className="text-muted-foreground leading-relaxed">
                   If you have any questions about these Terms of Service, please contact us at:
                 </p>
-                <p className="text-primary font-medium">appfinity.ai.studio@gmail.com</p>
+                <p className="text-primary font-medium">info@appfinityaistudio.com</p>
               </section>
             </div>
           </div>
