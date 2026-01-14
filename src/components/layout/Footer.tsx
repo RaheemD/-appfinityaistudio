@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.svg";
 
 const footerLinks = {
@@ -87,9 +87,13 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <p className="text-sm text-muted-foreground text-center">
+        <div className="mt-12 pt-8 border-t border-border text-center space-y-2">
+          <p className="text-sm text-muted-foreground">
             © {currentYear} Appfinity AI Studio — Intelligent apps.
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <span className="block sm:inline">MSME Registered | Govt. of India</span>
+            <span className="block sm:inline"> Udyam Reg. No: UDYAM-MH-18-0507003</span>
           </p>
         </div>
       </div>
