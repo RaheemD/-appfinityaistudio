@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="primaryGradient" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f5ecd" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Outer Hexagon/Network Shape -->
+  <path d="M100 20 L170 60 L170 140 L100 180 L30 140 L30 60 Z" 
+        stroke="url(#primaryGradient)" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+        fill="none" />
+        
+  <!-- Inner Infinity Symbol -->
+  <path d="M70 100 C70 85 90 85 100 100 C110 115 130 115 130 100 C130 85 110 85 100 100 C90 115 70 115 70 100 Z" 
+        stroke="url(#primaryGradient)" 
+        stroke-width="12" 
+        stroke-linecap="round"
+        fill="none"
+        filter="url(#glow)" />
+        
+  <!-- Tech Nodes -->
+  <circle cx="100" cy="20" r="6" fill="#0ea5e9" />
+  <circle cx="170" cy="60" r="6" fill="#0ea5e9" />
+  <circle cx="170" cy="140" r="6" fill="#0f5ecd" />
+  <circle cx="100" cy="180" r="6" fill="#0f5ecd" />
+  <circle cx="30" cy="140" r="6" fill="#0f5ecd" />
+  <circle cx="30" cy="60" r="6" fill="#0ea5e9" />
+  
+  <!-- Center AI Core -->
+  <circle cx="100" cy="100" r="8" fill="url(#primaryGradient)" />
+</svg>
