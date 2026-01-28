@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import logo from "@/assets/logo.svg";
+import whatsappIcon from "@/assets/WA.png";
 
 const navLinks = [
     { href: "/", label: "Home" },
@@ -60,11 +61,31 @@ export function Navbar() {
                             />
                         </Link>
                     ))}
+                    <Button variant="outline" size="icon" className="ml-1 border-green-600 text-green-600 hover:bg-green-600 hover:text-white" asChild>
+                        <a
+                            href="https://wa.me/919321364060"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Contact on WhatsApp"
+                        >
+                            <img src={whatsappIcon} alt="WhatsApp" className="h-5 w-5" />
+                        </a>
+                    </Button>
                     <ThemeToggle />
                 </nav>
 
                 {/* Mobile Menu Button */}
                 <div className="flex items-center gap-2 md:hidden">
+                    <Button variant="outline" size="icon" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white" asChild>
+                        <a
+                            href="https://wa.me/919321364060"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Contact on WhatsApp"
+                        >
+                            <img src={whatsappIcon} alt="WhatsApp" className="h-5 w-5" />
+                        </a>
+                    </Button>
                     <ThemeToggle />
                     <Button
                         variant="ghost"
