@@ -4,6 +4,8 @@ import { ExternalLink, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import fitnessmateLogo from "@/assets/fitnessmate-icon.png";
 import nextframeLogo from "@/assets/nextframe-icon.png";
+import worldlensLogo from "@/assets/Worldlens.png";
+import ascendLogo from "@/assets/ascend.png";
 
 const Products = () => {
     const products = [
@@ -35,10 +37,44 @@ const Products = () => {
                 "Audition scheduling",
                 "Real-time collaboration tools",
             ],
-            status: "Coming Soon",
-            statusColor: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+            status: "Live",
+            statusColor: "bg-green-500/10 text-green-600 border-green-500/20",
             logo: nextframeLogo,
             url: "https://nextframecasting.netlify.app/",
+            buttonText: "Visit Website",
+        },
+        {
+            id: 3,
+            name: "WorldLens",
+            tagline: "AI Travel Companion (PWA)",
+            description: "A PWA travel app with AI at its core — built to help travelers understand places, explore confidently, and stay informed with safety-focused insights.",
+            features: [
+                "AI-powered travel companion",
+                "Area safety info & alerts",
+                "Mobile-first PWA experience",
+                "Smart travel insights",
+            ],
+            status: "Live",
+            statusColor: "bg-green-500/10 text-green-600 border-green-500/20",
+            logo: worldlensLogo,
+            url: "https://worldailens.netlify.app/",
+            buttonText: "Visit Website",
+        },
+        {
+            id: 4,
+            name: "Ascend CRM",
+            tagline: "AI-First CRM Platform",
+            description: "An AI-first CRM designed for modern teams, with a secure workspace experience and multi-tenant architecture at its core.",
+            features: [
+                "AI-assisted workflows",
+                "Multi-tenant isolation",
+                "Enterprise security focus",
+                "Workspace-based access",
+            ],
+            status: "Live",
+            statusColor: "bg-green-500/10 text-green-600 border-green-500/20",
+            logo: ascendLogo,
+            url: "https://ascendaicrm.netlify.app/",
             buttonText: "Visit Website",
         },
     ];
