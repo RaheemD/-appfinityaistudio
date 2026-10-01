@@ -7,7 +7,11 @@ import { AboutHeroGraphic } from "@/components/AboutHeroGraphic";
 const ADDRESS = "Heaven Plaza, S.V. Road, Dahisar, Mumbai 400068, Maharashtra, India";
 const MAP_QUERY = encodeURIComponent("Heaven Plaza, S.V. Road, Dahisar, Mumbai 400068");
 const MAP_EMBED_URL = `https://maps.google.com/maps?q=${MAP_QUERY}&z=16&output=embed`;
-const DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${MAP_QUERY}`;
+// Route to the exact pinned building. A text address makes Google pick a different
+// "Heaven Plaza Society" ~1.3 km away, so use the pin's coordinates + Google place ID.
+const PLACE_COORDS = "19.2497368,72.8640558";
+const PLACE_ID = "ChIJ6z7Fuuiw5zsRZfXXc5pLfdY";
+const DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(PLACE_COORDS)}&destination_place_id=${PLACE_ID}`;
 
 const About = () => {
   const values = [
