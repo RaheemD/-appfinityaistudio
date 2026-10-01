@@ -1,65 +1,166 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, type ReactNode } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, ArrowRight, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
-// Use Pollinations.ai for free text generation without API key
-const generateArticle = async (seed: string) => {
-  try {
-    const prompt = `Write a tech spotlight review on the AI model '${seed}' as if it is today's featured tool.
-    
-    Structure the response clearly with these headers:
-    1. **What is it?**: A 1-sentence technical definition.
-    2. **Key Features**: Bullets of its top 3 technical capabilities.
-    3. **Best Work Use Cases**: Exactly what tasks professionals should use it for (e.g., coding, creative writing, data analysis).
-    
-    Tone: Professional, educational, and specific (like a tech YouTuber). Max 250 words.`;
+// Generated server-side (netlify/functions/daily-insight.mts) via OpenRouter and cached once per day.
+const INSIGHT_ENDPOINT = "/.netlify/functions/daily-insight";
+const INSIGHT_STORAGE_KEY = "appfinity:daily-insight";
+const INSIGHT_TIMEOUT_MS = 65_000;
 
-    // Pollinations Text API (Free, no key)
-    const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
-    const text = await response.text();
-    return text;
-  } catch (error) {
-    console.error("Error generating article:", error);
-    return "Failed to generate AI insight. Please try again later.";
+type DailyInsight = {
+  date: string;
+  topic: string;
+  content: string;
+  generatedAt: string;
+};
+
+const todayUtc = () => new Date().toISOString().slice(0, 10);
+
+const isDailyInsight = (value: unknown): value is DailyInsight => {
+  const v = value as DailyInsight;
+  return (
+    !!v &&
+    typeof v.date === "string" &&
+    typeof v.topic === "string" &&
+    typeof v.content === "string" &&
+    v.content.trim().length > 0 &&
+    typeof v.generatedAt === "string"
+  );
+};
+
+const readCachedInsight = (): DailyInsight | null => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(INSIGHT_STORAGE_KEY) ?? "null");
+    return isDailyInsight(parsed) && parsed.date === todayUtc() ? parsed : null;
+  } catch {
+    return null;
   }
 };
 
+const writeCachedInsight = (insight: DailyInsight) => {
+  try {
+    localStorage.setItem(INSIGHT_STORAGE_KEY, JSON.stringify(insight));
+  } catch {
+    // Storage unavailable (private mode, quota) - caching is optional.
+  }
+};
+
+const fetchInsight = async (signal: AbortSignal): Promise<DailyInsight> => {
+  const response = await fetch(INSIGHT_ENDPOINT, { signal, headers: { Accept: "application/json" } });
+  // Without the function deployed, the SPA fallback returns index.html, so check the type too.
+  if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
+    throw new Error(`Insight request failed (${response.status})`);
+  }
+  const data = await response.json();
+  if (!isDailyInsight(data)) throw new Error("Insight response was malformed");
+  return data;
+};
+
+// Minimal, safe Markdown rendering (headings, bullets, **bold**) without injecting HTML.
+const renderInline = (text: string): ReactNode[] =>
+  text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") && part.length > 4 ? (
+      <strong key={i}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    ),
+  );
+
+const renderInsight = (content: string): ReactNode[] => {
+  const blocks: ReactNode[] = [];
+  let bullets: string[] = [];
+
+  const flushBullets = () => {
+    if (bullets.length === 0) return;
+    blocks.push(
+      <ul key={`ul-${blocks.length}`} className="list-disc pl-5 space-y-1 my-2">
+        {bullets.map((item, i) => (
+          <li key={i}>{renderInline(item)}</li>
+        ))}
+      </ul>,
+    );
+    bullets = [];
+  };
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    const bullet = line.match(/^(?:[-*•]|\d+\.)\s+(.*)$/);
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+
+    if (bullet) {
+      bullets.push(bullet[1]);
+      continue;
+    }
+    flushBullets();
+    if (!line) continue;
+    if (heading) {
+      blocks.push(
+        <h4 key={`h-${blocks.length}`} className="text-base font-semibold text-foreground mt-4 mb-1 first:mt-0">
+          {renderInline(heading[1].replace(/\*\*/g, ""))}
+        </h4>,
+      );
+    } else {
+      blocks.push(
+        <p key={`p-${blocks.length}`} className="my-2">
+          {renderInline(line)}
+        </p>,
+      );
+    }
+  }
+  flushBullets();
+  return blocks;
+};
+
 const Blog = () => {
-  const [dailyArticle, setDailyArticle] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(new Date());
-  const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [initialInsight] = useState(readCachedInsight);
+  const [insight, setInsight] = useState<DailyInsight | null>(initialInsight);
+  const [loading, setLoading] = useState(!initialInsight);
+  const [failed, setFailed] = useState(false);
+  const requestRef = useRef<AbortController | null>(null);
 
-  const fetchDailyInsight = async () => {
+  const loadInsight = async () => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), INSIGHT_TIMEOUT_MS);
+
     setLoading(true);
-    // Specific trending AI models/tools
-    const topics = [
-      "OpenAI GPT-4o",
-      "Google Gemini 1.5 Pro",
-      "Anthropic Claude 3.5 Sonnet",
-      "Meta Llama 3.1",
-      "Midjourney v6",
-      "OpenAI Sora",
-      "GitHub Copilot Workspace",
-      "Mistral Large 2",
-      "Perplexity Pro",
-      "Stable Diffusion 3 Medium"
-    ];
-    // Get random topic
-    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-
-    const content = await generateArticle(randomTopic);
-    setDailyArticle(content);
-    setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    setLoading(false);
+    setFailed(false);
+    try {
+      const data = await fetchInsight(controller.signal);
+      if (requestRef.current !== controller) return;
+      setInsight(data);
+      writeCachedInsight(data);
+    } catch (error) {
+      if (requestRef.current !== controller) return;
+      console.error("Error loading daily insight:", error);
+      setFailed(true);
+    } finally {
+      clearTimeout(timeout);
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setLoading(false);
+      }
+    }
   };
 
   useEffect(() => {
-    fetchDailyInsight();
+    if (!initialInsight) loadInsight();
+    return () => {
+      const pending = requestRef.current;
+      requestRef.current = null;
+      pending?.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const insightDate = insight ? new Date(`${insight.date}T12:00:00Z`) : new Date();
+  const lastUpdated = insight
+    ? new Date(insight.generatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "";
 
   const featuredPosts = [
     {
@@ -116,45 +217,53 @@ const Blog = () => {
               <div className="grid md:grid-cols-3 gap-8 items-start">
                 <div className="md:col-span-1 space-y-4">
                   <button
-                    onClick={fetchDailyInsight}
+                    onClick={loadInsight}
                     disabled={loading}
                     className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-2 hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Regenerate insight"
-                    title="Regenerate insight"
+                    aria-label="Reload insight"
+                    title="Reload insight"
                   >
                     <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
                   </button>
                   <h2 className="text-2xl font-bold">Today's Featured Model</h2>
+                  {insight && <p className="text-lg font-semibold text-primary">{insight.topic}</p>}
                   <p className="text-muted-foreground">
                     Deep dive into the latest AI tools, their features, and real-world applications.
                   </p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
-                    <span>{date.toLocaleDateString()}</span>
+                    <span>{insightDate.toLocaleDateString()}</span>
                   </div>
                 </div>
 
                 <div className="md:col-span-2">
-                  {loading ? (
+                  {loading && !insight ? (
                     <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-xl bg-muted/30">
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         <p className="text-sm text-muted-foreground">Generating today's featured tool review...</p>
                       </div>
                     </div>
+                  ) : insight ? (
+                    <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none leading-relaxed">
+                      {renderInsight(insight.content)}
+                    </div>
                   ) : (
-                    <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none">
-                      <div className="whitespace-pre-line leading-relaxed">
-                        {dailyArticle ? (
-                          dailyArticle.replace(/^"/, '').replace(/"$/, '') // Remove quotes if present
-                        ) : (
-                          "Unable to generate insight today. Check back tomorrow!"
-                        )}
-                      </div>
+                    <div className="h-48 flex flex-col items-center justify-center gap-3 border border-dashed border-border rounded-xl bg-muted/30 text-center px-6">
+                      <p className="text-sm text-muted-foreground">
+                        Today's insight is taking a little longer than usual. Please check back shortly.
+                      </p>
+                      <Button variant="outline" size="sm" onClick={loadInsight}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Try again
+                      </Button>
                     </div>
                   )}
+                  {failed && insight && (
+                    <p className="mt-3 text-xs text-muted-foreground">Couldn't refresh right now - showing the latest available insight.</p>
+                  )}
                   <div className="mt-4 pt-4 border-t border-border flex justify-end items-center text-xs text-muted-foreground">
-                    <span>Updated: {lastUpdated}</span>
+                    {lastUpdated && <span>Updated: {lastUpdated}</span>}
                   </div>
                 </div>
               </div>

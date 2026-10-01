@@ -1,0 +1,19 @@
+# Dependencies & build output
+node_modules
+dist
+dist-ssr
+*.local
+
+# Netlify
+.netlify
+
+# Env files (never commit API keys)
+.env
+.env.*
+
+# Logs & editor
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
