@@ -1,5 +1,5 @@
 import { Layout } from "@/components/layout/Layout";
-import { Target, Award, Heart, Lightbulb, ArrowRight, MapPin, Navigation } from "lucide-react";
+import { Target, Award, Heart, Lightbulb, ArrowRight, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AboutHeroGraphic } from "@/components/AboutHeroGraphic";
@@ -7,11 +7,6 @@ import { AboutHeroGraphic } from "@/components/AboutHeroGraphic";
 const ADDRESS = "Heaven Plaza, S.V. Road, Dahisar, Mumbai 400068, Maharashtra, India";
 const MAP_QUERY = encodeURIComponent("Heaven Plaza, S.V. Road, Dahisar, Mumbai 400068");
 const MAP_EMBED_URL = `https://maps.google.com/maps?q=${MAP_QUERY}&z=16&output=embed`;
-// Route to the exact pinned building. A text address makes Google pick a different
-// "Heaven Plaza Society" ~1.3 km away, so use the pin's coordinates + Google place ID.
-const PLACE_COORDS = "19.2497368,72.8640558";
-const PLACE_ID = "ChIJ6z7Fuuiw5zsRZfXXc5pLfdY";
-const DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(PLACE_COORDS)}&destination_place_id=${PLACE_ID}`;
 
 const About = () => {
   const values = [
@@ -148,14 +143,8 @@ const About = () => {
                     {ADDRESS}
                   </address>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-                  <Button variant="outline" size="lg" asChild>
-                    <a href={DIRECTIONS_URL} target="_blank" rel="noopener noreferrer">
-                      <Navigation className="mr-2 h-4 w-4" />
-                      Get Directions
-                    </a>
-                  </Button>
-                  <Button size="lg" className="group" asChild>
+                <div className="flex shrink-0">
+                  <Button size="lg" className="group w-full sm:w-auto" asChild>
                     <Link to="/contact">
                       Get in Touch
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
