@@ -47,6 +47,16 @@ const MAX_VARIANTS = 20;
 
 type Topic = { name: string; facts: string | null };
 
+// Catalog names look like "Brand: Model". Drop the brand when the model name already
+// starts with it ("DeepSeek: DeepSeek V4.1" -> "DeepSeek V4.1"), else join them ("OpenAI GPT-6.1 Sol").
+function displayName(name: string) {
+  const sep = name.indexOf(": ");
+  if (sep < 0) return name;
+  const brand = name.slice(0, sep).trim();
+  const model = name.slice(sep + 2).trim();
+  return model.toLowerCase().startsWith(brand.toLowerCase()) ? model : `${brand} ${model}`;
+}
+
 // Used only if the OpenRouter catalog can't be loaded (latest models as of Oct 2026).
 const FALLBACK_TOPICS: Topic[] = [
   "OpenAI: GPT-6.1 Sol",
@@ -60,7 +70,7 @@ const FALLBACK_TOPICS: Topic[] = [
   "MiniMax: MiniMax M3",
   "Perplexity: Sonar Pro Search",
   "Mistral: Mistral Medium 3.5",
-].map((name) => ({ name, facts: null }));
+].map((name) => ({ name: displayName(name), facts: null }));
 
 type CatalogModel = {
   id: string;
@@ -69,9 +79,7 @@ type CatalogModel = {
   description?: string;
   context_length?: number;
   architecture?: { input_modalities?: string[]; output_modalities?: string[] };
-  pricing?: { prompt?: string; completion?: string };
   supported_parameters?: string[];
-  benchmarks?: { artificial_analysis?: Record<string, number | undefined> };
 };
 
 type Insight = {
@@ -109,11 +117,6 @@ const secondsUntilNextUtcMidnight = (now: Date) => {
 const formatTokens = (n: number) =>
   n >= 1_000_000 ? `${+(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}K` : String(n);
 
-const formatPrice = (perToken?: string) => {
-  const perMillion = Number(perToken) * 1_000_000;
-  return Number.isFinite(perMillion) && perMillion > 0 ? `$${perMillion.toFixed(2)}` : null;
-};
-
 // OpenRouter truncates descriptions with "..."; keep only complete sentences.
 const cleanDescription = (text = "") => {
   const trimmed = text.trim();
@@ -123,6 +126,7 @@ const cleanDescription = (text = "") => {
 };
 
 // Verified facts handed to the writer, so it never has to guess about models newer than its training data.
+// Prices and benchmark scores are deliberately left out: they change often and don't suit a studio blog.
 const buildFacts = (m: CatalogModel) => {
   const params = new Set(m.supported_parameters ?? []);
   const capabilities = [
@@ -130,27 +134,20 @@ const buildFacts = (m: CatalogModel) => {
     (params.has("structured_outputs") || params.has("response_format")) && "structured JSON output",
     params.has("reasoning") && "built-in reasoning (thinking) mode",
   ].filter(Boolean);
-  const input = formatPrice(m.pricing?.prompt);
-  const output = formatPrice(m.pricing?.completion);
-  const aa = m.benchmarks?.artificial_analysis;
-  const indices = aa
-    ? [
-        aa.intelligence_index != null && `intelligence ${aa.intelligence_index}`,
-        aa.coding_index != null && `coding ${aa.coding_index}`,
-        aa.agentic_index != null && `agentic ${aa.agentic_index}`,
-      ].filter(Boolean)
-    : [];
   const summary = cleanDescription(m.description);
+  const released = new Date(m.created * 1000).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   return [
-    `- Model: ${m.name} (API id: ${m.id})`,
-    `- Available on OpenRouter since: ${new Date(m.created * 1000).toISOString().slice(0, 10)}`,
+    `- Model: ${displayName(m.name || m.id)}`,
+    `- Released: ${released}`,
     summary && `- Official summary: ${summary}`,
     m.context_length && `- Context window: ${formatTokens(m.context_length)} tokens`,
     m.architecture?.input_modalities?.length && `- Accepts: ${m.architecture.input_modalities.join(", ")}`,
     capabilities.length > 0 && `- Capabilities: ${capabilities.join(", ")}`,
-    input && output && `- API price on OpenRouter: ${input} per 1M input tokens, ${output} per 1M output tokens`,
-    indices.length > 0 && `- Artificial Analysis index scores: ${indices.join(", ")}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -177,7 +174,7 @@ const pickLatestModels = (models: CatalogModel[], now: Date): Topic[] => {
     // Models launched together (e.g. "GPT-X" and "GPT-X Pro"): feature the base one.
     const launch = candidates.filter((m) => candidates[0].created - m.created < 2 * 86_400);
     const latest = launch.sort((a, b) => a.id.length - b.id.length)[0];
-    topics.push({ name: latest.name || latest.id, facts: buildFacts(latest) });
+    topics.push({ name: displayName(latest.name || latest.id), facts: buildFacts(latest) });
   }
   return topics;
 };
@@ -206,7 +203,7 @@ const topicFor = (topics: Topic[], now: Date, variant: number) => {
 
 const buildPrompt = (topic: Topic, today: string) => {
   const grounding = topic.facts
-    ? `Base the review ONLY on these verified facts from the OpenRouter model catalog (today is ${today}).
+    ? `Base the review ONLY on these verified facts (today is ${today}).
 This model may be newer than your training data, so do not add claims these facts do not support:
 ${topic.facts}`
     : `Today is ${today}. Only state facts you are confident about; if you are unsure, stay general.
@@ -228,15 +225,31 @@ One or two sentences: who makes it, what kind of model it is and what it is buil
 - Exactly 3 bullets, each a specific professional task it suits
 
 No title, no intro and no closing paragraph. Maximum 200 words.
+Do not mention prices, costs, benchmark scores, OpenRouter or API ids.
 Tone: professional, educational and specific, like a knowledgeable tech YouTuber.`;
 };
 
+// Drop any closing paragraph the model adds after the final bullet list, so every
+// insight ends cleanly on "Best Work Use Cases".
+const stripOutro = (text: string) => {
+  const lines = text.split("\n");
+  let lastHeading = -1;
+  let lastBullet = -1;
+  lines.forEach((line, i) => {
+    if (/^#{1,6}\s/.test(line.trim())) lastHeading = i;
+    if (/^(?:[-*•]|\d+\.)\s+/.test(line.trim())) lastBullet = i;
+  });
+  return lastBullet > lastHeading ? lines.slice(0, lastBullet + 1).join("\n") : text;
+};
+
 const cleanContent = (raw: string) =>
-  raw
-    .replace(/<think>[\s\S]*?<\/think>/gi, "")
-    .replace(/^```(?:markdown|md)?\s*/i, "")
-    .replace(/```\s*$/, "")
-    .trim();
+  stripOutro(
+    raw
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .replace(/^```(?:markdown|md)?\s*/i, "")
+      .replace(/```\s*$/, "")
+      .trim(),
+  ).trim();
 
 const callOpenRouter = async (apiKey: string, model: string, prompt: string, timeoutMs: number) => {
   const response = await fetch(OPENROUTER_URL, {

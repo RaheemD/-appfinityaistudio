@@ -8,7 +8,8 @@ import { Link } from "react-router-dom";
 // Generated server-side (netlify/functions/daily-insight.mts) via OpenRouter and cached once per day.
 // Variant 0 is the day's featured model; the refresh button steps through the other variants.
 const INSIGHT_ENDPOINT = "/.netlify/functions/daily-insight";
-const INSIGHT_STORAGE_KEY = "appfinity:daily-insight";
+// Bump the version suffix whenever the insight format changes, so stale copies are ignored.
+const INSIGHT_STORAGE_KEY = "appfinity:daily-insight:v2";
 const INSIGHT_TIMEOUT_MS = 65_000;
 
 type DailyInsight = {
