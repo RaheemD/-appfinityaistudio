@@ -2,7 +2,7 @@
 // Keep this in sync with the site pages (src/pages/*) when content changes.
 
 export const CONTACT = {
-  email: "appfinity.ai.studio@gmail.com",
+  email: "info@appfinityaistudio.com",
   phone: "+91 93213 64060",
   whatsapp: "https://wa.me/919321364060",
 };
@@ -29,11 +29,16 @@ export const SITE_KNOWLEDGE = `
 5. Custom Digital Solutions — tailored software to solve specific business challenges and drive growth.
 6. UI/UX Design & Prototyping — user-centered design: wireframes, clickable prototypes and production-ready UI systems.
 
-## Products (all live)
-- FitnessMate — "Your AI-Powered Fitness Companion". Personalized workout plans, nutrition tracking & meal plans, progress analytics & insights, community challenges. Live on Google Play: https://play.google.com/store/apps/details?id=app.netlify.fitnessmate.twa
-- Next Frame Casting — "Casting Made Simple". Connects talent with opportunities: advanced talent search, digital portfolio management, audition scheduling, real-time collaboration tools. https://nextframecasting.netlify.app/
-- WorldLens — "AI Travel Companion (PWA)". Helps travelers understand places and explore confidently: AI-powered travel companion, area safety info & alerts, mobile-first PWA, smart travel insights. https://worldailens.netlify.app/
-- Ascend CRM — "AI-First CRM Platform" for modern teams: AI-assisted workflows, multi-tenant isolation, enterprise security focus, workspace-based access. https://ascendaicrm.netlify.app/
+## Products
+2 products are live; the others are in development (always say which is which).
+
+Live:
+- FitnessMate (LIVE on Google Play) — "Your AI-Powered Fitness Companion". Personalized workout plans, nutrition tracking & meal plans, progress analytics & insights, community challenges. https://play.google.com/store/apps/details?id=app.netlify.fitnessmate.twa
+- Next Frame Casting (LIVE) — "Casting Made Simple". Connects talent with opportunities: advanced talent search, digital portfolio management, audition scheduling, real-time collaboration tools. https://nextframecasting.netlify.app/
+
+In development (not launched yet; the links show the current in-progress version):
+- WorldLens (IN DEVELOPMENT) — "AI Travel Companion (PWA)". Being built to help travelers understand places and explore confidently: AI-powered travel companion, area safety info & alerts, mobile-first PWA, smart travel insights. https://worldailens.netlify.app/
+- Ascend CRM (IN DEVELOPMENT) — "AI-First CRM Platform" for modern teams: AI-assisted workflows, multi-tenant isolation, enterprise security focus, workspace-based access. https://ascendaicrm.netlify.app/
 - More AI products are in development — updates on GitHub: https://github.com/RaheemD
 
 ## How we work

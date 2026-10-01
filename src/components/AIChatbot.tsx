@@ -296,7 +296,7 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
 
         return {
             content:
-                `Perfect — here’s what I captured:\n${summary}\n\nNext step: share this with our team and we’ll propose the best approach.\n\n📧 appfinity.ai.studio@gmail.com\n📞 +91 93213 64060`,
+                `Perfect — here’s what I captured:\n${summary}\n\nNext step: share this with our team and we’ll propose the best approach.\n\n📧 info@appfinityaistudio.com\n📞 +91 93213 64060`,
             nextConversation: { stage: "default" },
         };
     }
@@ -321,7 +321,7 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
     if (/\b(product|products|portfolio|work|projects)\b/.test(normalized)) {
         return {
             content:
-                "We've built some exciting products:\n\n🏋️ FitnessMate - AI-powered workout and nutrition platform\n🎬 Next Frame Casting - Talent coordination and casting platform\n🌍 WorldLens - AI-powered PWA travel companion\n📈 Ascend CRM - AI-first CRM platform\n\nWant to explore one of these?",
+                "We've built some exciting products:\n\nLive now:\n🏋️ FitnessMate - AI-powered workout and nutrition platform (on Google Play)\n🎬 Next Frame Casting - Talent coordination and casting platform\n\nIn development:\n🌍 WorldLens - AI-powered PWA travel companion\n📈 Ascend CRM - AI-first CRM platform\n\nSee them all on our Products page (/products). Want to explore one of these?",
         };
     }
 
@@ -336,7 +336,7 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
     if (/\b(contact|schedule|call|meeting|consultation|team)\b/.test(normalized)) {
         return {
             content:
-                "Great! You can reach us at:\n\n📧 appfinity.ai.studio@gmail.com\n📞 +91 93213 64060\n💬 WhatsApp: https://wa.me/919321364060\n\nOr visit our Contact page (/contact) to send us a message directly. We typically respond within 1-2 business days.",
+                "Great! You can reach us at:\n\n📧 info@appfinityaistudio.com\n📞 +91 93213 64060\n💬 WhatsApp: https://wa.me/919321364060\n\nOr visit our Contact page (/contact) to send us a message directly. We typically respond within 1-2 business days.",
         };
     }
 
@@ -410,7 +410,7 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
 
     return {
         content:
-            "That's a great question! While I can provide information about our services, products, and general inquiries, I'd recommend reaching out to our team directly for more specific discussions.\n\nYou can:\n• Email us at appfinity.ai.studio@gmail.com\n• Call +91 93213 64060\n• Use our contact form (/contact)\n\nIs there anything else I can help you with?",
+            "That's a great question! While I can provide information about our services, products, and general inquiries, I'd recommend reaching out to our team directly for more specific discussions.\n\nYou can:\n• Email us at info@appfinityaistudio.com\n• Call +91 93213 64060\n• Use our contact form (/contact)\n\nIs there anything else I can help you with?",
     };
 };
 

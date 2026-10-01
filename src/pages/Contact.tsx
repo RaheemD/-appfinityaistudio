@@ -95,7 +95,7 @@ const Contact = () => {
                   <div>
                     <h3 className="font-semibold text-foreground mb-1">Email</h3>
                     <a
-                      href="mailto:appfinity.ai.studio@gmail.com"
+                      href="mailto:info@appfinityaistudio.com"
                       className="text-muted-foreground hover:text-primary transition-colors duration-200 link-underline"
                     >
                       info@appfinityaistudio.com

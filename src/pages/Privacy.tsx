@@ -184,7 +184,7 @@ const Privacy = () => {
                 <p className="text-muted-foreground leading-relaxed">
                   If you have questions or concerns about this Privacy Policy or our practices, please contact us at{" "}
                   <a
-                    href="mailto:support@appfinity.ai"
+                    href="mailto:info@appfinityaistudio.com"
                     className="text-primary hover:underline font-medium"
                   >
                     info@appfinityaistudio.com
