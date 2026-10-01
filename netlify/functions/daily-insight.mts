@@ -12,50 +12,26 @@
 // Optional:
 //   OPENROUTER_MODEL     writer model, defaults to "z-ai/glm-5.3-flash"
 
+import {
+  type CatalogModel,
+  cleanDescription,
+  displayName,
+  formatTokens,
+  loadLatestModels,
+  releasedLabel,
+} from "../lib/model-catalog.mts";
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 const DEFAULT_MODEL = "z-ai/glm-5.3-flash";
 
 // Netlify synchronous functions are hard-limited to 60s; stay well inside it.
 const TOTAL_BUDGET_MS = 50_000;
 const MIN_RETRY_BUDGET_MS = 20_000;
-const CATALOG_TIMEOUT_MS = 10_000;
-const CATALOG_TTL_MS = 60 * 60 * 1000;
-
-// Well-known model families, in rotation order. Each day features the newest
-// text model from one family; the refresh button steps through the rest.
-const FAMOUS_PROVIDERS = [
-  "openai",
-  "anthropic",
-  "google",
-  "deepseek",
-  "qwen",
-  "z-ai",
-  "x-ai",
-  "moonshotai",
-  "minimax",
-  "perplexity",
-  "mistralai",
-  "meta-llama",
-];
-// Skip families with nothing new in the last year, and non-chat / experimental variants.
-const MAX_MODEL_AGE_DAYS = 365;
-const EXCLUDED_MODEL = /guard|embed|moderation|-exp|image|audio|tts|transcri|realtime/i;
 
 // Hard cap on ?v=, so at most this many paid generations can happen per day.
 const MAX_VARIANTS = 20;
 
 type Topic = { name: string; facts: string | null };
-
-// Catalog names look like "Brand: Model". Drop the brand when the model name already
-// starts with it ("DeepSeek: DeepSeek V4.1" -> "DeepSeek V4.1"), else join them ("OpenAI GPT-6.1 Sol").
-function displayName(name: string) {
-  const sep = name.indexOf(": ");
-  if (sep < 0) return name;
-  const brand = name.slice(0, sep).trim();
-  const model = name.slice(sep + 2).trim();
-  return model.toLowerCase().startsWith(brand.toLowerCase()) ? model : `${brand} ${model}`;
-}
 
 // Used only if the OpenRouter catalog can't be loaded (latest models as of Oct 2026).
 const FALLBACK_TOPICS: Topic[] = [
@@ -72,16 +48,6 @@ const FALLBACK_TOPICS: Topic[] = [
   "Mistral: Mistral Medium 3.5",
 ].map((name) => ({ name: displayName(name), facts: null }));
 
-type CatalogModel = {
-  id: string;
-  name: string;
-  created: number;
-  description?: string;
-  context_length?: number;
-  architecture?: { input_modalities?: string[]; output_modalities?: string[] };
-  supported_parameters?: string[];
-};
-
 type Insight = {
   date: string;
   variant: number;
@@ -94,7 +60,6 @@ type Insight = {
 // Per-instance memo + in-flight dedupe keyed by "date:variant" (the CDN cache is the main layer).
 const memo = new Map<string, Insight>();
 const inFlight = new Map<string, Promise<Insight>>();
-let catalog: { topics: Topic[]; fetchedAt: number } | null = null;
 
 const utcDateKey = (now: Date) => now.toISOString().slice(0, 10);
 
@@ -114,17 +79,6 @@ const secondsUntilNextUtcMidnight = (now: Date) => {
   return Math.max(60, Math.floor((next - now.getTime()) / 1000));
 };
 
-const formatTokens = (n: number) =>
-  n >= 1_000_000 ? `${+(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}K` : String(n);
-
-// OpenRouter truncates descriptions with "..."; keep only complete sentences.
-const cleanDescription = (text = "") => {
-  const trimmed = text.trim();
-  if (!trimmed.endsWith("...")) return trimmed;
-  const complete = trimmed.slice(0, -3).match(/^[\s\S]*[.!?](?=\s)/);
-  return complete ? complete[0] : "";
-};
-
 // Verified facts handed to the writer, so it never has to guess about models newer than its training data.
 // Prices and benchmark scores are deliberately left out: they change often and don't suit a studio blog.
 const buildFacts = (m: CatalogModel) => {
@@ -135,15 +89,10 @@ const buildFacts = (m: CatalogModel) => {
     params.has("reasoning") && "built-in reasoning (thinking) mode",
   ].filter(Boolean);
   const summary = cleanDescription(m.description);
-  const released = new Date(m.created * 1000).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 
   return [
     `- Model: ${displayName(m.name || m.id)}`,
-    `- Released: ${released}`,
+    `- Released: ${releasedLabel(m)}`,
     summary && `- Official summary: ${summary}`,
     m.context_length && `- Context window: ${formatTokens(m.context_length)} tokens`,
     m.architecture?.input_modalities?.length && `- Accepts: ${m.architecture.input_modalities.join(", ")}`,
@@ -153,42 +102,12 @@ const buildFacts = (m: CatalogModel) => {
     .join("\n");
 };
 
-// Newest chat model from each well-known family, straight from the live OpenRouter catalog.
-const pickLatestModels = (models: CatalogModel[], now: Date): Topic[] => {
-  const minCreated = now.getTime() / 1000 - MAX_MODEL_AGE_DAYS * 86_400;
-  const topics: Topic[] = [];
-  for (const provider of FAMOUS_PROVIDERS) {
-    const candidates = models
-      .filter(
-        (m) =>
-          typeof m?.id === "string" &&
-          m.id.startsWith(`${provider}/`) &&
-          !m.id.includes(":") &&
-          !EXCLUDED_MODEL.test(m.id) &&
-          typeof m.created === "number" &&
-          m.created >= minCreated &&
-          (m.architecture?.output_modalities ?? ["text"]).join() === "text",
-      )
-      .sort((a, b) => b.created - a.created);
-    if (candidates.length === 0) continue;
-    // Models launched together (e.g. "GPT-X" and "GPT-X Pro"): feature the base one.
-    const launch = candidates.filter((m) => candidates[0].created - m.created < 2 * 86_400);
-    const latest = launch.sort((a, b) => a.id.length - b.id.length)[0];
-    topics.push({ name: displayName(latest.name || latest.id), facts: buildFacts(latest) });
-  }
-  return topics;
-};
-
+// Each day features the newest model from one well-known family (see ../lib/model-catalog.mts);
+// the refresh button steps through the rest.
 const loadTopics = async (now: Date): Promise<Topic[]> => {
-  if (catalog && Date.now() - catalog.fetchedAt < CATALOG_TTL_MS) return catalog.topics;
   try {
-    const response = await fetch(OPENROUTER_MODELS_URL, { signal: AbortSignal.timeout(CATALOG_TIMEOUT_MS) });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    const topics = pickLatestModels(Array.isArray(data?.data) ? data.data : [], now);
-    if (topics.length < 3) throw new Error(`only ${topics.length} models matched`);
-    catalog = { topics, fetchedAt: Date.now() };
-    return topics;
+    const models = await loadLatestModels(now);
+    return models.map((m) => ({ name: displayName(m.name || m.id), facts: buildFacts(m) }));
   } catch (error) {
     console.error("[daily-insight] model catalog unavailable, using fallback list:", error);
     return FALLBACK_TOPICS;

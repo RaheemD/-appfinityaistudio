@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import ScrollToTop from "./components/ScrollToTop";
+import { AIChatbot } from "./components/AIChatbot";
 import Products from "./pages/Products";
 import Services from "./pages/Services";
 import About from "./pages/About";
@@ -38,6 +39,8 @@ const App = () => (
             <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          {/* Mounted once (not per page) so the conversation continues across navigation. */}
+          <AIChatbot />
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

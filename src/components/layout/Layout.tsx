@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
-import { AIChatbot } from "@/components/AIChatbot";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 
 interface LayoutProps {
@@ -14,7 +13,6 @@ export function Layout({ children }: LayoutProps) {
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
-      <AIChatbot />
       <ScrollToTopButton />
     </div>
   );
