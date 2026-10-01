@@ -13,6 +13,17 @@ const INSIGHT_ENDPOINT = "/.netlify/functions/daily-insight";
 const INSIGHT_STORAGE_KEY = "appfinity:daily-insight:v2";
 const INSIGHT_TIMEOUT_MS = 65_000;
 
+// Rolling status shown while an uncached insight is written (mirrors what the server does).
+const LOADING_STAGES = [
+  { at: 0, label: "Starting up" },
+  { at: 1500, label: "Thinking" },
+  { at: 4000, label: "Scanning the latest AI models" },
+  { at: 7000, label: "Reading the specs" },
+  { at: 10000, label: "Writing the review" },
+  { at: 14000, label: "Polishing the details" },
+  { at: 19000, label: "Almost there" },
+];
+
 type DailyInsight = {
   date: string;
   variant?: number;
@@ -125,18 +136,21 @@ const Blog = () => {
   const [insight, setInsight] = useState<DailyInsight | null>(initialInsight);
   const [loading, setLoading] = useState(!initialInsight);
   const [failed, setFailed] = useState(false);
-  const [slowLoad, setSlowLoad] = useState(false);
+  const [loadingMs, setLoadingMs] = useState(0);
   const requestRef = useRef<AbortController | null>(null);
 
-  // An uncached insight is written on demand; reassure the visitor if it takes a while.
+  // Drives the rolling status messages and progress bar while an insight is being written.
   useEffect(() => {
-    if (!loading) {
-      setSlowLoad(false);
-      return;
-    }
-    const timer = setTimeout(() => setSlowLoad(true), 6000);
-    return () => clearTimeout(timer);
+    setLoadingMs(0);
+    if (!loading) return;
+    const started = Date.now();
+    const timer = setInterval(() => setLoadingMs(Date.now() - started), 250);
+    return () => clearInterval(timer);
   }, [loading]);
+
+  const loadingStage = [...LOADING_STAGES].reverse().find((stage) => loadingMs >= stage.at) ?? LOADING_STAGES[0];
+  // Eases toward 95% and only completes when the insight actually arrives.
+  const loadingProgress = Math.round(95 * (1 - Math.exp(-loadingMs / 7000)));
 
   const loadInsight = async (variant = 0) => {
     requestRef.current?.abort();
@@ -269,9 +283,12 @@ const Blog = () => {
                 <div className="md:col-span-2">
                   {loading ? (
                     <div role="status" aria-live="polite" className="space-y-5">
-                      <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
-                        <Sparkles className="w-4 h-4 animate-pulse" />
-                        <span>Thinking</span>
+                      <div className="inline-flex items-center gap-2 overflow-hidden rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
+                        <Sparkles className="w-4 h-4 shrink-0 animate-pulse" />
+                        {/* key change re-runs the slide-up, so each new stage rolls in like a ticker */}
+                        <span key={loadingStage.label} className="motion-safe:animate-slide-up">
+                          {loadingStage.label}
+                        </span>
                         <span className="flex items-end gap-1 pb-0.5" aria-hidden="true">
                           {[0, 150, 300].map((delay) => (
                             <span
@@ -295,9 +312,12 @@ const Blog = () => {
                           </div>
                         ))}
                       </div>
-                      {slowLoad && (
-                        <p className="text-xs text-muted-foreground">Writing a fresh insight — this can take a few seconds.</p>
-                      )}
+                      <div className="h-1 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-[width] duration-300 ease-out"
+                          style={{ width: `${Math.max(loadingProgress, 4)}%` }}
+                        />
+                      </div>
                     </div>
                   ) : insight ? (
                     <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none leading-relaxed">
