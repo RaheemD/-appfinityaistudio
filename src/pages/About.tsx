@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Target, Award, Heart, Lightbulb, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import aboutHeroSvg from "@/assets/about-hero.svg";
+import { AboutHeroGraphic } from "@/components/AboutHeroGraphic";
 
 const About = () => {
   const values = [
@@ -64,12 +64,8 @@ const About = () => {
                 </div>
               </div>
 
-              <div className="relative">
-                <img
-                  src={aboutHeroSvg}
-                  alt="About Appfinity AI Studio"
-                  className="w-full h-auto rounded-2xl"
-                />
+              <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-accent/5">
+                <AboutHeroGraphic className="w-full h-auto" />
               </div>
             </div>
           </div>
