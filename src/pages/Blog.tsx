@@ -2,7 +2,8 @@ import { useRef, useEffect, useState, type ReactNode } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, ArrowRight, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { Calendar, Clock, ArrowRight, Sparkles, RefreshCw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 
 // Generated server-side (netlify/functions/daily-insight.mts) via OpenRouter and cached once per day.
@@ -124,7 +125,18 @@ const Blog = () => {
   const [insight, setInsight] = useState<DailyInsight | null>(initialInsight);
   const [loading, setLoading] = useState(!initialInsight);
   const [failed, setFailed] = useState(false);
+  const [slowLoad, setSlowLoad] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
+
+  // An uncached insight is written on demand; reassure the visitor if it takes a while.
+  useEffect(() => {
+    if (!loading) {
+      setSlowLoad(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlowLoad(true), 6000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const loadInsight = async (variant = 0) => {
     requestRef.current?.abort();
@@ -256,11 +268,36 @@ const Blog = () => {
 
                 <div className="md:col-span-2">
                   {loading ? (
-                    <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-xl bg-muted/30">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">Generating today's featured tool review...</p>
+                    <div role="status" aria-live="polite" className="space-y-5">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                        <span>Thinking</span>
+                        <span className="flex items-end gap-1 pb-0.5" aria-hidden="true">
+                          {[0, 150, 300].map((delay) => (
+                            <span
+                              key={delay}
+                              className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+                              style={{ animationDelay: `${delay}ms` }}
+                            />
+                          ))}
+                        </span>
                       </div>
+                      {/* Placeholder in the shape of the review, so the card doesn't jump when it arrives */}
+                      <div className="space-y-3" aria-hidden="true">
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-5/6" />
+                        <Skeleton className="h-4 w-32 mt-5" />
+                        {["w-11/12", "w-4/5", "w-3/4"].map((width) => (
+                          <div key={width} className="flex items-center gap-2">
+                            <Skeleton className="h-1.5 w-1.5 rounded-full shrink-0" />
+                            <Skeleton className={`h-3 ${width}`} />
+                          </div>
+                        ))}
+                      </div>
+                      {slowLoad && (
+                        <p className="text-xs text-muted-foreground">Writing a fresh insight — this can take a few seconds.</p>
+                      )}
                     </div>
                   ) : insight ? (
                     <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none leading-relaxed">
