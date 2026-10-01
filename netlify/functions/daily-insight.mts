@@ -31,20 +31,35 @@ const TOPICS = [
 
 type Insight = {
   date: string;
+  variant: number;
+  variants: number;
   topic: string;
   content: string;
   generatedAt: string;
 };
 
-// Per-instance memo + in-flight dedupe (the CDN cache is the main layer).
-let memo: Insight | null = null;
-let inFlight: { date: string; promise: Promise<Insight> } | null = null;
+// Per-instance memo + in-flight dedupe keyed by "date:variant" (the CDN cache is the main layer).
+const memo = new Map<string, Insight>();
+const inFlight = new Map<string, Promise<Insight>>();
 
 const utcDateKey = (now: Date) => now.toISOString().slice(0, 10);
 
-const topicForDate = (now: Date) => {
+// Variant 0 is the day's featured model; the refresh button walks through the others.
+// Variants are capped at TOPICS.length, so at most that many paid generations per day.
+const topicFor = (now: Date, variant: number) => {
   const dayIndex = Math.floor(now.getTime() / 86_400_000);
-  return TOPICS[dayIndex % TOPICS.length];
+  return TOPICS[(dayIndex + variant) % TOPICS.length];
+};
+
+// Returns the requested variant, or null if the query string is anything other than ?v=<0..N-1>.
+const parseVariant = (url: URL): number | null => {
+  const keys = [...url.searchParams.keys()];
+  if (keys.length === 0) return url.search ? null : 0;
+  if (keys.length !== 1 || keys[0] !== "v") return null;
+  const raw = url.searchParams.get("v") ?? "";
+  if (!/^(0|[1-9]\d?)$/.test(raw)) return null; // no "01"-style aliases of the same variant
+  const variant = Number(raw);
+  return variant < TOPICS.length ? variant : null;
 };
 
 const secondsUntilNextUtcMidnight = (now: Date) => {
@@ -127,12 +142,12 @@ const callOpenRouter = async (apiKey: string, model: string, topic: string, time
   return content;
 };
 
-const generateInsight = async (now: Date): Promise<Insight> => {
+const generateInsight = async (now: Date, variant: number): Promise<Insight> => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");
 
   const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
-  const topic = topicForDate(now);
+  const topic = topicFor(now, variant);
   const deadline = Date.now() + TOTAL_BUDGET_MS;
 
   let lastError: unknown;
@@ -141,7 +156,14 @@ const generateInsight = async (now: Date): Promise<Insight> => {
     if (attempt > 1 && remaining < MIN_RETRY_BUDGET_MS) break;
     try {
       const content = await callOpenRouter(apiKey, model, topic, remaining);
-      return { date: utcDateKey(now), topic, content, generatedAt: new Date().toISOString() };
+      return {
+        date: utcDateKey(now),
+        variant,
+        variants: TOPICS.length,
+        topic,
+        content,
+        generatedAt: new Date().toISOString(),
+      };
     } catch (error) {
       lastError = error;
       console.error(`[daily-insight] attempt ${attempt} failed:`, error);
@@ -163,27 +185,28 @@ export default async (req: Request) => {
     return json({ error: "Method not allowed" }, 405, { ...NO_STORE, Allow: "GET, HEAD" });
   }
 
-  // Query strings would create new CDN cache keys (and new paid generations), so refuse them.
-  if (new URL(req.url).search) {
-    return json({ error: "Query parameters are not supported" }, 400, NO_STORE);
+  // Every distinct query string is a new CDN cache key (and a new paid generation),
+  // so only ?v=<0..N-1> is accepted.
+  const variant = parseVariant(new URL(req.url));
+  if (variant === null) {
+    return json({ error: "Unsupported query parameters" }, 400, NO_STORE);
   }
 
   const now = new Date();
   const today = utcDateKey(now);
+  const key = `${today}:${variant}`;
 
   try {
-    let insight: Insight;
-    if (memo?.date === today) {
-      insight = memo;
-    } else {
-      if (inFlight?.date !== today) {
-        const promise = generateInsight(now).finally(() => {
-          if (inFlight?.promise === promise) inFlight = null;
-        });
-        inFlight = { date: today, promise };
+    let insight = memo.get(key);
+    if (!insight) {
+      let promise = inFlight.get(key);
+      if (!promise) {
+        promise = generateInsight(now, variant).finally(() => inFlight.delete(key));
+        inFlight.set(key, promise);
       }
-      insight = await inFlight.promise;
-      memo = insight;
+      insight = await promise;
+      for (const k of memo.keys()) if (!k.startsWith(`${today}:`)) memo.delete(k);
+      memo.set(key, insight);
     }
 
     return json(insight, 200, {
@@ -191,6 +214,7 @@ export default async (req: Request) => {
       // keeps serving the previous day's copy while a new one is generated in the background.
       "Cache-Control": "public, max-age=0, must-revalidate",
       "Netlify-CDN-Cache-Control": `public, durable, s-maxage=${secondsUntilNextUtcMidnight(now)}, stale-while-revalidate=86400`,
+      "Netlify-Vary": "query=v",
     });
   } catch (error) {
     console.error("[daily-insight] generation failed:", error);

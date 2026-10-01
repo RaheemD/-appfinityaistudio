@@ -6,12 +6,15 @@ import { Calendar, Clock, ArrowRight, Sparkles, Loader2, RefreshCw } from "lucid
 import { Link } from "react-router-dom";
 
 // Generated server-side (netlify/functions/daily-insight.mts) via OpenRouter and cached once per day.
+// Variant 0 is the day's featured model; the refresh button steps through the other variants.
 const INSIGHT_ENDPOINT = "/.netlify/functions/daily-insight";
 const INSIGHT_STORAGE_KEY = "appfinity:daily-insight";
 const INSIGHT_TIMEOUT_MS = 65_000;
 
 type DailyInsight = {
   date: string;
+  variant?: number;
+  variants?: number;
   topic: string;
   content: string;
   generatedAt: string;
@@ -48,8 +51,9 @@ const writeCachedInsight = (insight: DailyInsight) => {
   }
 };
 
-const fetchInsight = async (signal: AbortSignal): Promise<DailyInsight> => {
-  const response = await fetch(INSIGHT_ENDPOINT, { signal, headers: { Accept: "application/json" } });
+const fetchInsight = async (variant: number, signal: AbortSignal): Promise<DailyInsight> => {
+  const url = variant > 0 ? `${INSIGHT_ENDPOINT}?v=${variant}` : INSIGHT_ENDPOINT;
+  const response = await fetch(url, { signal, headers: { Accept: "application/json" } });
   // Without the function deployed, the SPA fallback returns index.html, so check the type too.
   if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
     throw new Error(`Insight request failed (${response.status})`);
@@ -121,7 +125,7 @@ const Blog = () => {
   const [failed, setFailed] = useState(false);
   const requestRef = useRef<AbortController | null>(null);
 
-  const loadInsight = async () => {
+  const loadInsight = async (variant = 0) => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -130,7 +134,7 @@ const Blog = () => {
     setLoading(true);
     setFailed(false);
     try {
-      const data = await fetchInsight(controller.signal);
+      const data = await fetchInsight(variant, controller.signal);
       if (requestRef.current !== controller) return;
       setInsight(data);
       writeCachedInsight(data);
@@ -156,6 +160,19 @@ const Blog = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const [requestedVariant, setRequestedVariant] = useState(initialInsight?.variant ?? 0);
+
+  const loadVariant = (variant: number) => {
+    setRequestedVariant(variant);
+    loadInsight(variant);
+  };
+
+  // Show the next model; if nothing has loaded yet, just retry the current one.
+  const showNextInsight = () => {
+    const total = insight?.variants ?? 0;
+    loadVariant(insight && total > 1 ? ((insight.variant ?? 0) + 1) % total : requestedVariant);
+  };
 
   const insightDate = insight ? new Date(`${insight.date}T12:00:00Z`) : new Date();
   const lastUpdated = insight
@@ -217,11 +234,11 @@ const Blog = () => {
               <div className="grid md:grid-cols-3 gap-8 items-start">
                 <div className="md:col-span-1 space-y-4">
                   <button
-                    onClick={loadInsight}
+                    onClick={showNextInsight}
                     disabled={loading}
                     className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-2 hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Reload insight"
-                    title="Reload insight"
+                    aria-label="Show another AI model"
+                    title="Show another AI model"
                   >
                     <RefreshCw className={`w-6 h-6 ${loading ? 'animate-spin' : ''}`} />
                   </button>
@@ -237,7 +254,7 @@ const Blog = () => {
                 </div>
 
                 <div className="md:col-span-2">
-                  {loading && !insight ? (
+                  {loading ? (
                     <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-xl bg-muted/30">
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -253,13 +270,13 @@ const Blog = () => {
                       <p className="text-sm text-muted-foreground">
                         Today's insight is taking a little longer than usual. Please check back shortly.
                       </p>
-                      <Button variant="outline" size="sm" onClick={loadInsight}>
+                      <Button variant="outline" size="sm" onClick={() => loadVariant(requestedVariant)}>
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Try again
                       </Button>
                     </div>
                   )}
-                  {failed && insight && (
+                  {failed && insight && !loading && (
                     <p className="mt-3 text-xs text-muted-foreground">Couldn't refresh right now - showing the latest available insight.</p>
                   )}
                   <div className="mt-4 pt-4 border-t border-border flex justify-end items-center text-xs text-muted-foreground">
