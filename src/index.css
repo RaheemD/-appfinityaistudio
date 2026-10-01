@@ -195,8 +195,23 @@
   }
 
   .card-hover:hover {
-    @apply -translate-y-1 border-primary/20;
+    @apply border-primary/20;
+    /* `translate` rather than a transform utility: cards that also use animate-fade-in keep
+       `transform` held by the animation's forwards fill, which would cancel the lift. */
+    translate: 0 -4px;
     box-shadow: var(--shadow-lg);
+  }
+
+  /* Dark mode: the black --shadow-lg is invisible on the dark background, so glow in the brand blue. */
+  .dark .card-hover::before {
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        hsl(var(--primary) / 0.12),
+        transparent 40%);
+  }
+
+  .dark .card-hover:hover {
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow: 0 12px 32px -8px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.15);
   }
 
   /* Smooth scale on hover for clickable elements */
