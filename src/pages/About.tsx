@@ -1,8 +1,13 @@
 import { Layout } from "@/components/layout/Layout";
-import { Target, Award, Heart, Lightbulb, ArrowRight } from "lucide-react";
+import { Target, Award, Heart, Lightbulb, ArrowRight, MapPin, Navigation } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AboutHeroGraphic } from "@/components/AboutHeroGraphic";
+
+const ADDRESS = "Heaven Plaza, S.V. Road, Dahisar, Mumbai 400068, Maharashtra, India";
+const MAP_QUERY = encodeURIComponent("Heaven Plaza, S.V. Road, Dahisar, Mumbai 400068");
+const MAP_EMBED_URL = `https://maps.google.com/maps?q=${MAP_QUERY}&z=16&output=embed`;
+const DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${MAP_QUERY}`;
 
 const About = () => {
   const values = [
@@ -109,18 +114,51 @@ const About = () => {
             </div>
           </div>
 
-          <div className="text-center opacity-0 animate-fade-in" style={{ animationDelay: "1s" }}>
-            <div className="max-w-2xl mx-auto p-12 rounded-3xl border border-border bg-card hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-              <h3 className="text-3xl font-bold mb-4">Want to work together?</h3>
-              <p className="text-lg text-muted-foreground mb-8">
-                We're open to new projects and collaborations — let's discuss how we can help.
+          {/* Location */}
+          <div className="max-w-4xl mx-auto opacity-0 animate-fade-in" style={{ animationDelay: "1s" }}>
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Where to Find Us</h2>
+              <p className="text-lg text-muted-foreground">
+                Based in Mumbai, India — open to new projects and collaborations.
               </p>
-              <Link to="/contact">
-                <Button size="lg" className="group">
-                  Get in Touch
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
+            </div>
+            <div className="rounded-3xl border border-border bg-card overflow-hidden hover:shadow-2xl transition-shadow duration-300">
+              <div className="aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9] w-full bg-muted">
+                {/* Google's embed is light-only; in dark mode invert it (hue-rotate keeps water blue and the pin red). */}
+                <iframe
+                  title="Appfinity AI Studio location on Google Maps"
+                  src={MAP_EMBED_URL}
+                  className="h-full w-full border-0 dark:[filter:invert(90%)_hue-rotate(180deg)]"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 p-6 md:p-8">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <address className="not-italic text-muted-foreground leading-relaxed">
+                    <span className="block font-semibold text-foreground">Appfinity AI Studio</span>
+                    {ADDRESS}
+                  </address>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                  <Button variant="outline" size="lg" asChild>
+                    <a href={DIRECTIONS_URL} target="_blank" rel="noopener noreferrer">
+                      <Navigation className="mr-2 h-4 w-4" />
+                      Get Directions
+                    </a>
+                  </Button>
+                  <Button size="lg" className="group" asChild>
+                    <Link to="/contact">
+                      Get in Touch
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
