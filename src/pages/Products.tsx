@@ -4,6 +4,7 @@ import { ExternalLink, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import fitnessmateLogo from "@/assets/fitnessmate-icon.png";
 import nextframeLogo from "@/assets/nextframe-icon.png";
+import fairoriginLogo from "@/assets/fairorigin.png";
 import worldlensLogo from "@/assets/Worldlens.png";
 import ascendLogo from "@/assets/ascend.png";
 
@@ -41,6 +42,23 @@ const Products = () => {
             statusColor: "bg-green-500/10 text-green-600 border-green-500/20",
             logo: nextframeLogo,
             url: "https://nextframecasting.netlify.app/",
+            buttonText: "Visit Website",
+        },
+        {
+            id: 5,
+            name: "FairOrigin Global",
+            tagline: "Trusted at the Source. Ready for the World.",
+            description: "A premium brand and trade platform for a global sourcing, export and brand-development company — showcasing its flagship Wild Bull energy drink, upcoming launches and partnership programs for distributors and retailers worldwide.",
+            features: [
+                "Product showcase & launch roadmap",
+                "Distributor & partner enquiries",
+                "Multilingual: English, French & Spanish",
+                "AI chat assistant & WhatsApp chat",
+            ],
+            status: "Live",
+            statusColor: "bg-green-500/10 text-green-600 border-green-500/20",
+            logo: fairoriginLogo,
+            url: "https://fairoriginglobal.com/",
             buttonText: "Visit Website",
         },
         {

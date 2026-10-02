@@ -30,11 +30,12 @@ export const SITE_KNOWLEDGE = `
 6. UI/UX Design & Prototyping — user-centered design: wireframes, clickable prototypes and production-ready UI systems.
 
 ## Products
-2 products are live; the others are in development (always say which is which).
+3 products are live; the others are in development (always say which is which).
 
 Live:
 - FitnessMate (LIVE on Google Play) — "Your AI-Powered Fitness Companion". Personalized workout plans, nutrition tracking & meal plans, progress analytics & insights, community challenges. https://play.google.com/store/apps/details?id=app.netlify.fitnessmate.twa
 - Next Frame Casting (LIVE) — "Casting Made Simple". Connects talent with opportunities: advanced talent search, digital portfolio management, audition scheduling, real-time collaboration tools. https://nextframecasting.netlify.app/
+- FairOrigin Global (LIVE) — "Trusted at the Source. Ready for the World." Premium brand and trade platform for a global sourcing, export and brand-development company (herbal, beverage, natural and lifestyle products), featuring its flagship Wild Bull energy drink: product showcase & launch roadmap, distributor & partner enquiries, multilingual (English, French, Spanish), AI chat assistant and WhatsApp chat. https://fairoriginglobal.com/
 
 In development (not launched yet; the links show the current in-progress version):
 - WorldLens (IN DEVELOPMENT) — "AI Travel Companion (PWA)". Being built to help travelers understand places and explore confidently: AI-powered travel companion, area safety info & alerts, mobile-first PWA, smart travel insights. https://worldailens.netlify.app/

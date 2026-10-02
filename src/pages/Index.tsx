@@ -82,7 +82,7 @@ const Index = () => {
             </div>
             <div className="text-center space-y-2 opacity-0 animate-fade-in" style={{ animationDelay: "0.3s" }}>
               <div className="text-4xl md:text-5xl font-bold text-primary">
-                <CountUp end={2} duration={2000} />
+                <CountUp end={3} duration={2000} />
               </div>
               <p className="text-sm md:text-base text-muted-foreground">Live Products</p>
             </div>

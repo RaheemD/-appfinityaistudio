@@ -321,7 +321,7 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
     if (/\b(product|products|portfolio|work|projects)\b/.test(normalized)) {
         return {
             content:
-                "We've built some exciting products:\n\nLive now:\n🏋️ FitnessMate - AI-powered workout and nutrition platform (on Google Play)\n🎬 Next Frame Casting - Talent coordination and casting platform\n\nIn development:\n🌍 WorldLens - AI-powered PWA travel companion\n📈 Ascend CRM - AI-first CRM platform\n\nSee them all on our Products page (/products). Want to explore one of these?",
+                "We've built some exciting products:\n\nLive now:\n🏋️ FitnessMate - AI-powered workout and nutrition platform (on Google Play)\n🎬 Next Frame Casting - Talent coordination and casting platform\n🌿 FairOrigin Global - Brand & trade platform for global sourcing and export\n\nIn development:\n🌍 WorldLens - AI-powered PWA travel companion\n📈 Ascend CRM - AI-first CRM platform\n\nSee them all on our Products page (/products). Want to explore one of these?",
         };
     }
 
