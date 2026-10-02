@@ -382,7 +382,7 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
     if (normalized.includes("experience") || normalized.includes("who are you") || normalized.includes("about you") || normalized.includes("about appfinity")) {
         return {
             content:
-                "Appfinity AI Studio is a technology studio with 2+ years of experience building intelligent digital products. We've delivered 10+ projects including web platforms, mobile apps, and AI solutions. We're passionate about creating technology that solves real problems!",
+                "Appfinity AI Studio is a technology studio with 2+ years of experience building intelligent digital products. We've launched 3 live products and have 10+ projects in progress across web platforms, mobile apps, and AI solutions. We're passionate about creating technology that solves real problems!",
         };
     }
 

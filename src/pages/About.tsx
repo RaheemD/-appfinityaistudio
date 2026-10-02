@@ -105,7 +105,7 @@ const About = () => {
             <div className="max-w-3xl mx-auto text-center space-y-6">
               <h2 className="text-3xl md:text-4xl font-bold">Our Journey</h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Since our inception, we've been on a mission to democratize AI and make sophisticated technology accessible to businesses of all sizes. With over 2 years of dedicated work, we've successfully delivered 10+ projects and launched 3 live products that are making an impact in their respective markets.
+                Since our inception, we've been on a mission to democratize AI and make sophisticated technology accessible to businesses of all sizes. With over 2 years of dedicated work, we've launched 3 live products that are making an impact in their respective markets, and we have 10+ projects in progress.
               </p>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Every project is an opportunity to learn, innovate, and push the boundaries of what's possible. We're proud of what we've accomplished, but we're even more excited about what's ahead.

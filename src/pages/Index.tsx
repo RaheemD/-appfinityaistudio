@@ -72,7 +72,7 @@ const Index = () => {
               <div className="text-4xl md:text-5xl font-bold text-primary">
                 <CountUp end={10} suffix="+" duration={2000} />
               </div>
-              <p className="text-sm md:text-base text-muted-foreground">Projects Delivered</p>
+              <p className="text-sm md:text-base text-muted-foreground">Projects in Progress</p>
             </div>
             <div className="text-center space-y-2 opacity-0 animate-fade-in" style={{ animationDelay: "0.2s" }}>
               <div className="text-4xl md:text-5xl font-bold text-primary">

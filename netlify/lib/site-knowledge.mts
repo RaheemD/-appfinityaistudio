@@ -15,7 +15,7 @@ export const SITE_KNOWLEDGE = `
 - "We build intelligent web and mobile products and automation tools that help businesses scale." We help teams ship high-quality software faster.
 - Expertise: AI & intelligent automation, mobile & web development, cloud solutions, and UI/UX design.
 - Mission: democratize AI and make sophisticated technology accessible to businesses of all sizes; bridge the gap between complex technology and user-friendly applications.
-- Track record: 2+ years of experience, 10+ projects delivered, 6 services offered.
+- Track record: 2+ years of experience, 3 live products, 10+ projects in progress, 6 services offered. (Never say "10+ projects delivered" — they are in progress.)
 - Core values: Innovation First, Quality Driven, Client-Centric, Creative Solutions.
 - Based in Mumbai, India. Address: Heaven Plaza, S.V. Road, Dahisar, Mumbai 400068, Maharashtra, India.
 - MSME registered with the Government of India (Udyam Reg. No: UDYAM-MH-18-0507003).
