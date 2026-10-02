@@ -23,17 +23,18 @@ export function Navbar() {
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center justify-between">
-                <Link to="/" className="flex items-center gap-3 group">
-                    <div className="relative">
+                <Link to="/" className="flex shrink-0 items-center gap-2 sm:gap-3 group">
+                    <div className="relative shrink-0">
                         <img
                             src={logo}
                             alt="Appfinity AI Studio"
-                            className="h-9 w-9 object-contain transition-transform duration-300 group-hover:scale-110"
+                            className="h-8 w-8 sm:h-9 sm:w-9 object-contain transition-transform duration-300 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
-                    <span className="text-lg font-semibold text-foreground hidden sm:block">
-                        Appfinity AI Studio
+                    {/* Slightly smaller on phones so it fits beside the WhatsApp, theme and menu buttons */}
+                    <span className="whitespace-nowrap text-sm max-[359px]:leading-tight min-[375px]:text-[15px] min-[390px]:text-base sm:text-lg md:text-base lg:text-lg font-semibold text-foreground">
+                        Appfinity <span className="max-[359px]:block">AI Studio</span>
                     </span>
                 </Link>
 
@@ -44,7 +45,7 @@ export function Navbar() {
                             key={link.href}
                             to={link.href}
                             className={cn(
-                                "relative px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg group",
+                                "relative px-2.5 lg:px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg group",
                                 location.pathname === link.href
                                     ? "text-primary"
                                     : "text-muted-foreground hover:text-foreground"
@@ -53,7 +54,7 @@ export function Navbar() {
                             {link.label}
                             <span
                                 className={cn(
-                                    "absolute bottom-1 left-4 right-4 h-0.5 bg-primary rounded-full transition-transform duration-200 origin-left",
+                                    "absolute bottom-1 left-2.5 right-2.5 lg:left-4 lg:right-4 h-0.5 bg-primary rounded-full transition-transform duration-200 origin-left",
                                     location.pathname === link.href
                                         ? "scale-x-100"
                                         : "scale-x-0 group-hover:scale-x-100"
@@ -75,7 +76,7 @@ export function Navbar() {
                 </nav>
 
                 {/* Mobile Menu Button */}
-                <div className="flex items-center gap-2 md:hidden">
+                <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:hidden">
                     <Button variant="outline" size="icon" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white" asChild>
                         <a
                             href="https://wa.me/919321364060"
