@@ -39,7 +39,7 @@ Live:
 
 In development (not launched yet; the links show the current in-progress version):
 - WorldLens (IN DEVELOPMENT) — "AI Travel Companion (PWA)". Being built to help travelers understand places and explore confidently: AI-powered travel companion, area safety info & alerts, mobile-first PWA, smart travel insights. https://worldailens.netlify.app/
-- Ascend CRM (IN DEVELOPMENT) — "AI-First CRM Platform" for modern teams: AI-assisted workflows, multi-tenant isolation, enterprise security focus, workspace-based access. https://ascend-aicrm.netlify.app/
+- Ascend CRM (IN DEVELOPMENT) — "AI-First CRM Platform". Turns WhatsApp chats and Gmail inbox into organised, AI-scored leads; drafts follow-ups in English, Hinglish or Hindi; imports existing data from Excel and CSV files. (Only mention WhatsApp, Gmail and Excel/CSV as lead sources.) https://ascend-aicrm.netlify.app/
 - More AI products are in development — updates on GitHub: https://github.com/RaheemD
 
 ## How we work
