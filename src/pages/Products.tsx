@@ -92,7 +92,7 @@ const Products = () => {
             status: "In Development",
             statusColor: "bg-amber-500/10 text-amber-600 border-amber-500/20",
             logo: ascendLogo,
-            url: "https://ascendaicrm.netlify.app/",
+            url: "https://ascend-aicrm.netlify.app/",
             buttonText: "Visit Website",
         },
     ];
