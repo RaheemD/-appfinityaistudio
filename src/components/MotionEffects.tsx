@@ -23,32 +23,50 @@ export const MotionEffects = () => {
     if (!document.documentElement.classList.contains("reveal-on")) return;
 
     const observedAt = new WeakMap<Element, number>();
+    const pending = new Set<Element>();
+
+    const reveal = (targets: Element[]) => {
+      if (targets.length === 0) return;
+      const now = performance.now();
+      const scrolledIn = targets.filter((el) => now - (observedAt.get(el) ?? 0) > ENTRANCE_WINDOW_MS);
+
+      if (scrolledIn.length > 0) {
+        const delays = scrolledIn.map((el) => parseSeconds(getComputedStyle(el).animationDelay));
+        const earliest = Math.min(...delays);
+        scrolledIn.forEach((el, i) => {
+          (el as HTMLElement).style.animationDelay = `${Math.min(delays[i] - earliest, MAX_SCROLL_DELAY_S)}s`;
+        });
+      }
+
+      targets.forEach((el) => {
+        el.classList.add("in-view");
+        pending.delete(el);
+        io.unobserve(el);
+      });
+    };
 
     const io = new IntersectionObserver(
-      (entries) => {
-        const now = performance.now();
-        const visible = entries.filter((entry) => entry.isIntersecting);
-        const scrolledIn = visible.filter((entry) => now - (observedAt.get(entry.target) ?? 0) > ENTRANCE_WINDOW_MS);
-
-        if (scrolledIn.length > 0) {
-          const delays = scrolledIn.map((entry) => parseSeconds(getComputedStyle(entry.target).animationDelay));
-          const earliest = Math.min(...delays);
-          scrolledIn.forEach((entry, i) => {
-            (entry.target as HTMLElement).style.animationDelay = `${Math.min(delays[i] - earliest, MAX_SCROLL_DELAY_S)}s`;
-          });
-        }
-
-        visible.forEach((entry) => {
-          entry.target.classList.add("in-view");
-          io.unobserve(entry.target);
-        });
-      },
+      (entries) => reveal(entries.filter((entry) => entry.isIntersecting).map((entry) => entry.target)),
       { rootMargin: "0px 0px -40px 0px" },
     );
+
+    // Safety net: a fast fling (or a slow device) can carry an element past the viewport between two
+    // rendered frames, so the observer never sees it intersect. Reveal anything scrolled to or past.
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const limit = window.innerHeight - 40;
+        reveal([...pending].filter((el) => el.getBoundingClientRect().top < limit));
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     const observe = (el: Element) => {
       if (observedAt.has(el) || el.classList.contains("in-view")) return;
       observedAt.set(el, performance.now());
+      pending.add(el);
       io.observe(el);
     };
 
@@ -69,6 +87,8 @@ export const MotionEffects = () => {
     return () => {
       io.disconnect();
       mo.disconnect();
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
     };
   }, []);
 
