@@ -351,7 +351,13 @@ const Blog = () => {
           <h3 className="text-2xl font-bold mb-8">Latest Articles</h3>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {featuredPosts.map((post, index) => (
-              <Card key={post.id} className="group card-hover overflow-hidden border-border opacity-0 animate-fade-in" style={{ animationDelay: `${0.3 + index * 0.1}s` }}>
+              // The whole card opens the article: the title link is stretched over it (after:inset-0).
+              // `[scale:...]` rather than a transform utility, which the fade-in animation would override.
+              <Card
+                key={post.id}
+                className="group card-hover overflow-hidden border-border opacity-0 animate-fade-in active:[scale:0.985] has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-2"
+                style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+              >
                 <div className="aspect-video w-full overflow-hidden">
                   <img
                     src={post.image}
@@ -364,13 +370,22 @@ const Blog = () => {
                     <span className="bg-primary/10 px-2 py-1 rounded-full">{post.category}</span>
                   </div>
                   <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors">
-                    <Link to={`/blog/${post.id}`}>{post.title}</Link>
+                    <Link
+                      to={`/blog/${post.id}`}
+                      className="focus-visible:outline-none after:absolute after:inset-0 after:z-10 after:content-['']"
+                    >
+                      {post.title}
+                    </Link>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="line-clamp-3">
                     {post.excerpt}
                   </CardDescription>
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary" aria-hidden="true">
+                    Read article
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  </span>
                 </CardContent>
                 <CardFooter className="flex justify-between items-center text-sm text-muted-foreground border-t border-border pt-4 mt-auto">
                   <div className="flex items-center gap-4">
