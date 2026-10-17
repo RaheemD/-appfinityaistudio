@@ -16,8 +16,11 @@ export const TypingEffect = ({
     const [currentWordIndex, setCurrentWordIndex] = useState(0);
     const [currentText, setCurrentText] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
+    // Visitors who ask for less motion see the word straight away, without the typing cursor.
+    const [reduceMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
     useEffect(() => {
+        if (reduceMotion) return;
         const currentWord = words[currentWordIndex];
 
         const handleTyping = () => {
@@ -47,12 +50,12 @@ export const TypingEffect = ({
         );
 
         return () => clearTimeout(timer);
-    }, [currentText, isDeleting, currentWordIndex, words, typingSpeed, deletingSpeed, delayBetweenWords]);
+    }, [currentText, isDeleting, currentWordIndex, words, typingSpeed, deletingSpeed, delayBetweenWords, reduceMotion]);
 
     return (
         <span className="text-primary relative">
-            {currentText}
-            <span className="animate-pulse">|</span>
+            {reduceMotion ? words[0] : currentText}
+            {!reduceMotion && <span className="animate-pulse">|</span>}
         </span>
     );
 };

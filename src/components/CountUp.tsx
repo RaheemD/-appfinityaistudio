@@ -8,7 +8,9 @@ interface CountUpProps {
 }
 
 export const CountUp = ({ end, duration = 2000, suffix = "", prefix = "" }: CountUpProps) => {
-    const [count, setCount] = useState(0);
+    // Visitors who ask for less motion see the final number straight away.
+    const [reduceMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const [count, setCount] = useState(reduceMotion ? end : 0);
     const [hasStarted, setHasStarted] = useState(false);
     const elementRef = useRef<HTMLSpanElement>(null);
 
@@ -30,7 +32,7 @@ export const CountUp = ({ end, duration = 2000, suffix = "", prefix = "" }: Coun
     }, [hasStarted]);
 
     useEffect(() => {
-        if (!hasStarted) return;
+        if (!hasStarted || reduceMotion) return;
 
         const startTime = Date.now();
         const endTime = startTime + duration;
@@ -51,7 +53,7 @@ export const CountUp = ({ end, duration = 2000, suffix = "", prefix = "" }: Coun
         };
 
         requestAnimationFrame(updateCount);
-    }, [hasStarted, end, duration]);
+    }, [hasStarted, end, duration, reduceMotion]);
 
     return (
         <span ref={elementRef}>

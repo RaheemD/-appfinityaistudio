@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import ScrollToTop from "./components/ScrollToTop";
 import { AIChatbot } from "./components/AIChatbot";
+import { MotionEffects } from "./components/MotionEffects";
 import Products from "./pages/Products";
 import Services from "./pages/Services";
 import About from "./pages/About";
@@ -27,6 +28,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ScrollToTop />
+          <MotionEffects />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/products" element={<Products />} />

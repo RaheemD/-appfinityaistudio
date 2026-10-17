@@ -166,9 +166,12 @@
     @apply transition-all duration-300 ease-out;
   }
 
-  .hover-lift:hover {
-    @apply -translate-y-1;
-    box-shadow: var(--shadow-lg);
+  /* Hover effects only on devices with a real mouse: on phones a tap would leave them "stuck" on. */
+  @media (hover: hover) and (pointer: fine) {
+    .hover-lift:hover {
+      @apply -translate-y-1;
+      box-shadow: var(--shadow-lg);
+    }
   }
 
   /* Enhanced card hover with subtle glow */
@@ -190,28 +193,31 @@
     pointer-events: none;
   }
 
-  .card-hover:hover::before {
-    opacity: 1;
-  }
-
-  .card-hover:hover {
-    @apply border-primary/20;
-    /* `translate` rather than a transform utility: cards that also use animate-fade-in keep
-       `transform` held by the animation's forwards fill, which would cancel the lift. */
-    translate: 0 -4px;
-    box-shadow: var(--shadow-lg);
-  }
-
-  /* Dark mode: the black --shadow-lg is invisible on the dark background, so glow in the brand blue. */
+  /* Dark mode: the black --shadow-lg is invisible on the dark background, so glow in the brand blue.
+     The spotlight follows the mouse (--mouse-x/y are set by components/MotionEffects.tsx). */
   .dark .card-hover::before {
     background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
         hsl(var(--primary) / 0.12),
         transparent 40%);
   }
 
-  .dark .card-hover:hover {
-    border-color: hsl(var(--primary) / 0.45);
-    box-shadow: 0 12px 32px -8px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.15);
+  @media (hover: hover) and (pointer: fine) {
+    .card-hover:hover::before {
+      opacity: 1;
+    }
+
+    .card-hover:hover {
+      @apply border-primary/20;
+      /* `translate` rather than a transform utility: cards that also use animate-fade-in keep
+         `transform` held by the animation's forwards fill, which would cancel the lift. */
+      translate: 0 -4px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .dark .card-hover:hover {
+      border-color: hsl(var(--primary) / 0.45);
+      box-shadow: 0 12px 32px -8px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.15);
+    }
   }
 
   /* Smooth scale on hover for clickable elements */
@@ -219,8 +225,10 @@
     @apply transition-transform duration-300 ease-out;
   }
 
-  .hover-scale:hover {
-    @apply scale-[1.02];
+  @media (hover: hover) and (pointer: fine) {
+    .hover-scale:hover {
+      @apply scale-[1.02];
+    }
   }
 
   /* Shine effect for buttons */
@@ -243,8 +251,10 @@
     transition: left 0.5s ease;
   }
 
-  .btn-shine:hover::before {
-    left: 100%;
+  @media (hover: hover) and (pointer: fine) {
+    .btn-shine:hover::before {
+      left: 100%;
+    }
   }
 
   /* Smooth border animation */
@@ -265,8 +275,10 @@
     transition: opacity 0.3s ease-out;
   }
 
-  .border-animate:hover::after {
-    opacity: 1;
+  @media (hover: hover) and (pointer: fine) {
+    .border-animate:hover::after {
+      opacity: 1;
+    }
   }
 
   /* Icon float animation */
@@ -274,8 +286,10 @@
     @apply transition-transform duration-300 ease-out;
   }
 
-  .icon-float:hover {
-    animation: float 2s ease-in-out infinite;
+  @media (hover: hover) and (pointer: fine) {
+    .icon-float:hover {
+      animation: float 2s ease-in-out infinite;
+    }
   }
 
   /* Stagger animations */
@@ -357,14 +371,174 @@
     transition: transform 0.3s ease-out;
   }
 
-  .link-underline:hover::after {
-    transform: scaleX(1);
-    transform-origin: left;
+  @media (hover: hover) and (pointer: fine) {
+    .link-underline:hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
   }
 
   /* Smooth backdrop blur on scroll */
   .backdrop-blur-subtle {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+  }
+}
+/* ---------------------------------------------------------------------------------------------
+   Motion system. Kept outside @layer so these rules are always emitted.
+   --------------------------------------------------------------------------------------------- */
+
+/* No grey flash on tap (buttons and cards give their own feedback). */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scroll reveal: `animate-fade-in` waits until the element is in view (components/MotionEffects.tsx). */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-on .animate-fade-in:not(.in-view) {
+    animation-play-state: paused;
+  }
+}
+
+/* Visitors who ask their device for less motion: everything appears in its final state at once. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .border-beam,
+  .btn-sheen::after {
+    display: none;
+  }
+}
+
+/* Printing: never leave content invisible on paper. */
+@media print {
+  .animate-fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Hero backdrop: a fine dot grid that fades out from the centre, plus a soft brand glow. */
+.hero-dots {
+  background-image: radial-gradient(hsl(var(--primary) / 0.2) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 15%, transparent 72%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 15%, transparent 72%);
+}
+
+.dark .hero-dots {
+  background-image: radial-gradient(hsl(var(--primary) / 0.28) 1px, transparent 1.4px);
+}
+
+.hero-glow {
+  background: radial-gradient(closest-side, hsl(var(--primary) / 0.14), transparent);
+}
+
+.dark .hero-glow {
+  background: radial-gradient(closest-side, hsl(var(--primary) / 0.22), transparent);
+}
+
+/* Animated shiny text (MagicUI-style): a slow highlight sweeps across, then rests. */
+.text-shiny {
+  background-image: linear-gradient(110deg,
+      hsl(var(--muted-foreground)) 40%,
+      hsl(var(--foreground)) 50%,
+      hsl(var(--muted-foreground)) 60%);
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shiny 5s ease-in-out infinite;
+}
+
+@keyframes text-shiny {
+  0% {
+    background-position: 100% 0;
+  }
+
+  55%,
+  100% {
+    background-position: 0% 0;
+  }
+}
+
+/* Button sheen: a gentle light passes across every few seconds (no hover needed, so phones see it). */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, hsl(0 0% 100% / 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: btn-sheen 5s ease-in-out 1.5s infinite;
+}
+
+@keyframes btn-sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  25%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* Border beam (MagicUI-style): a light travels around a card's border.
+   The ring is cut out with a mask; the beam follows the card's rounded outline via offset-path. */
+.border-beam {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  padding: var(--beam-width, 1.5px);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.border-beam::after {
+  content: "";
+  position: absolute;
+  width: var(--beam-size, 140px);
+  aspect-ratio: 1;
+  background: linear-gradient(to left, hsl(var(--accent)), hsl(var(--primary)) 45%, transparent);
+  offset-path: rect(0 auto auto 0 round var(--beam-radius, 1.5rem));
+  offset-anchor: 90% 50%;
+  animation: border-beam var(--beam-duration, 10s) linear var(--beam-delay, 0s) infinite;
+}
+
+@keyframes border-beam {
+  from {
+    offset-distance: 0%;
+  }
+
+  to {
+    offset-distance: 100%;
+  }
+}
+
+/* Older browsers without offset-path shapes simply keep the normal border. */
+@supports not (offset-path: rect(0 auto auto 0)) {
+  .border-beam {
+    display: none;
   }
 }

@@ -2,6 +2,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Cpu, Globe, Smartphone, Zap, Lightbulb, Palette, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { BorderBeam } from "@/components/BorderBeam";
 
 const Services = () => {
   const services = [
@@ -83,7 +84,8 @@ const Services = () => {
           </div>
 
           <div className="mt-16 opacity-0 animate-fade-in" style={{ animationDelay: "0.8s" }}>
-            <div className="max-w-3xl mx-auto text-center p-12 rounded-3xl border border-border bg-card hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+            <div className="relative max-w-3xl mx-auto text-center p-12 rounded-3xl border border-border bg-card hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
+              <BorderBeam duration={9} size={120} />
               <h3 className="text-3xl font-bold mb-4">Have a project in mind?</h3>
               <p className="text-lg text-muted-foreground mb-8">
                 Let's discuss how we can bring your ideas to life.

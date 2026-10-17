@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
@@ -28,9 +28,16 @@ const Index = () => {
     <Layout>
       {/* Hero Section */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-background to-muted/20">
+        {/* Backdrop: fine dot grid fading from the centre + a soft brand glow (index.css) */}
+        <div aria-hidden="true" className="hero-dots pointer-events-none absolute inset-0" />
+        <div aria-hidden="true" className="hero-glow pointer-events-none absolute left-1/2 top-[8%] h-[480px] w-[760px] max-w-[140%] -translate-x-1/2" />
         <div className="container relative z-10 py-20 md:py-32">
           <div className="mx-auto max-w-4xl text-center space-y-8">
             <div className="space-y-4 opacity-0 animate-fade-in">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/60 px-4 py-1.5 text-xs sm:text-sm font-medium backdrop-blur-sm">
+                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                <span className="text-shiny">AI-first product studio · Mumbai, India</span>
+              </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
                 Building{" "}
                 <TypingEffect
@@ -49,7 +56,7 @@ const Index = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center opacity-0 animate-fade-in" style={{ animationDelay: "0.4s" }}>
               <Link to="/products">
-                <Button size="lg" className="group">
+                <Button size="lg" className="group btn-sheen">
                   Explore Products
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>

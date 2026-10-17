@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, ArrowRight, Sparkles, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BorderBeam } from "@/components/BorderBeam";
 import { Link } from "react-router-dom";
 
 // Generated server-side (netlify/functions/daily-insight.mts) via OpenRouter and cached once per day.
@@ -253,6 +254,7 @@ const Blog = () => {
           {/* Daily AI Insight Section - The "Smart" Feature */}
           <div className="mb-20 opacity-0 animate-fade-in" style={{ animationDelay: "0.2s" }}>
             <div className="bg-gradient-to-br from-primary/5 via-card to-card border border-primary/20 rounded-3xl p-8 md:p-10 relative overflow-hidden group">
+              <BorderBeam duration={12} size={160} />
               <div className="absolute top-0 right-0 bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 DAILY AI GENERATED INSIGHT

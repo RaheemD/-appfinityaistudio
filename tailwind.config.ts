@@ -2,6 +2,10 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
+  // `hover:` styles only apply on devices with a real mouse, so taps on phones don't leave them stuck on.
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -92,9 +96,10 @@ export default {
           from: { height: "var(--radix-accordion-content-height)", opacity: "1" },
           to: { height: "0", opacity: "0" },
         },
+        // Blur-fade reveal (MagicUI-style); ends on `filter: none` so nothing stays filtered afterwards.
         "fade-in": {
-          "0%": { opacity: "0", transform: "translateY(16px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
+          "0%": { opacity: "0", transform: "translateY(16px)", filter: "blur(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)", filter: "none" },
         },
         "fade-in-up": {
           "0%": { opacity: "0", transform: "translateY(24px)" },
