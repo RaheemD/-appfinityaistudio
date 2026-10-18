@@ -1,4 +1,4 @@
-import { ArrowRight, Lightbulb, MessageCircle, Sparkles, Workflow } from "lucide-react";
+import { ArrowRight, Lightbulb, Sparkles, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
@@ -143,7 +143,7 @@ const Index = () => {
                 </span>
                 <h2 className="text-3xl md:text-4xl font-bold">Try our AI Lab</h2>
                 <p className="text-lg text-muted-foreground">
-                  Plan your app idea, see how to automate repetitive work, or reply to WhatsApp leads faster - free, no sign-up.
+                  Turn your app idea into a plan, or see how to automate the work you repeat every day - free, no sign-up.
                 </p>
                 <Button size="lg" className="group" asChild>
                   <Link to="/lab">
@@ -156,7 +156,6 @@ const Index = () => {
                 {[
                   { to: "/lab?tool=blueprint", icon: Lightbulb, title: "App Blueprint", text: "Have an app idea? Get a one-page product plan." },
                   { to: "/lab?tool=xray", icon: Workflow, title: "Automation X-Ray", text: "Repeating the same task? See how to automate it." },
-                  { to: "/lab?tool=reply", icon: MessageCircle, title: "WhatsApp Reply Coach", text: "Selling on WhatsApp? Get replies that convert." },
                 ].map((tool) => (
                   <Link
                     key={tool.to}

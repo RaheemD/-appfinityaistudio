@@ -8,17 +8,13 @@ import {
   Clock,
   Copy,
   Database,
-  Flame,
   Gift,
   Lightbulb,
   Mail,
-  MessageCircle,
   Play,
   RotateCcw,
   ShieldCheck,
-  Snowflake,
   Sparkles,
-  ThermometerSun,
   UserCheck,
   Users,
   Workflow,
@@ -36,10 +32,10 @@ import { BorderBeam } from "@/components/BorderBeam";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import whatsappIcon from "@/assets/WA.png";
-import ascendLogo from "@/assets/ascend.png";
 
-// Free AI tools for visitors. Generated server-side by netlify/functions/lab.mts (GLM 5.3 Flash via
-// OpenRouter). Results go to WhatsApp through click-to-chat links - no WhatsApp API needed.
+// Free AI tools for visitors: App Blueprint and Automation X-Ray. Generated server-side by
+// netlify/functions/lab.mts (GLM 5.3 Flash via OpenRouter). Results go to WhatsApp through
+// click-to-chat links - no WhatsApp API needed.
 
 const LAB_ENDPOINT = "/api/lab";
 const STUDIO_WHATSAPP = "919321364060";
@@ -58,24 +54,10 @@ const BLUEPRINT_STAGES: Stage[] = [
   { at: 19000, label: "Almost there" },
 ];
 
-const COACH_STAGES: Stage[] = [
-  { at: 0, label: "Reading the message" },
-  { at: 1500, label: "Scoring the lead" },
-  { at: 4000, label: "Writing replies" },
-  { at: 8000, label: "Polishing the tone" },
-  { at: 13000, label: "Almost there" },
-];
-
 const IDEA_EXAMPLES = [
   "An app for local gyms to manage members, track attendance and send WhatsApp payment reminders",
   "A marketplace connecting parents with verified home tutors in their neighbourhood",
   "An AI tool that turns a restaurant's Google reviews into weekly improvement tips",
-];
-
-const MESSAGE_EXAMPLES = [
-  "Hi, is the blue kurta available in M size? What's the price and how fast can you deliver to Pune?",
-  "Bhaiya ye sofa ka last price kya hoga? Delivery free hai kya?",
-  "I ordered 5 days ago and still haven't received anything. This is really disappointing.",
 ];
 
 const PLATFORM_OPTIONS = [
@@ -83,12 +65,6 @@ const PLATFORM_OPTIONS = [
   { value: "mobile", label: "Mobile" },
   { value: "both", label: "Both" },
   { value: "unsure", label: "Not sure" },
-];
-
-const LANGUAGE_OPTIONS = [
-  { value: "english", label: "English" },
-  { value: "hinglish", label: "Hinglish" },
-  { value: "hindi", label: "हिंदी" },
 ];
 
 class LabError extends Error {}
@@ -423,217 +399,6 @@ const BlueprintTool = () => {
             )}
           </div>
         )}
-      </div>
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------------------------
-// WhatsApp Reply Coach
-// ---------------------------------------------------------------------------------------------
-
-type CoachResult = {
-  lead: { temperature: "hot" | "warm" | "cold"; reason: string };
-  intent: string;
-  replies: { label: string; text: string }[];
-};
-
-const LEAD_STYLES = {
-  hot: { label: "Hot lead", icon: Flame, className: "border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400" },
-  warm: { label: "Warm lead", icon: ThermometerSun, className: "border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-  cold: { label: "Cold lead", icon: Snowflake, className: "border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-400" },
-};
-
-const isCoachResult = (value: unknown): value is CoachResult => {
-  const v = value as CoachResult;
-  return !!v && !!LEAD_STYLES[v.lead?.temperature] && Array.isArray(v.replies) && v.replies.length > 0;
-};
-
-const ReplyCoachTool = () => {
-  const [message, setMessage] = useState("");
-  const [business, setBusiness] = useState("");
-  const [language, setLanguage] = useState("english");
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
-  const [result, setResult] = useState<CoachResult | null>(null);
-  const [error, setError] = useState("");
-  const requestRef = useRef<AbortController | null>(null);
-  const resultRef = useRef<HTMLDivElement>(null);
-  const elapsed = useElapsed(status === "loading");
-  const copy = useCopy();
-
-  useEffect(() => () => requestRef.current?.abort(), []);
-
-  const run = async (event: FormEvent) => {
-    event.preventDefault();
-    const trimmed = message.trim();
-    if (trimmed.length < 2 || status === "loading") return;
-
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
-    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    setResult(null);
-    setError("");
-    setStatus("loading");
-    window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-
-    try {
-      const response = await postLab({ tool: "reply", message: trimmed, business: business.trim(), language }, controller.signal);
-      if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
-        throw new LabError(await errorMessage(response));
-      }
-      const data = await response.json();
-      if (!isCoachResult(data)) throw new LabError("The AI Lab is busy right now. Please try again.");
-      setResult(data);
-      setStatus("done");
-    } catch (err) {
-      if (requestRef.current !== controller) return;
-      setError(err instanceof LabError ? err.message : "Couldn't reach the AI Lab. Check your connection and try again.");
-      setStatus("error");
-    } finally {
-      window.clearTimeout(timeout);
-      if (requestRef.current === controller) requestRef.current = null;
-    }
-  };
-
-  const lead = result ? LEAD_STYLES[result.lead.temperature] : null;
-
-  return (
-    <div className="space-y-8">
-      <form onSubmit={run} className="rounded-3xl border border-border bg-card p-6 md:p-8 space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="customer-message" className="text-base font-semibold">Paste your customer's message</Label>
-          <Textarea
-            id="customer-message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            maxLength={1500}
-            rows={4}
-            placeholder="e.g. Hi, do you have this in stock? What's the price with delivery?"
-            className="rounded-xl resize-none text-base"
-          />
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-xs text-muted-foreground">Try an example:</span>
-            {MESSAGE_EXAMPLES.map((example, i) => (
-              <button
-                key={example}
-                type="button"
-                onClick={() => setMessage(example)}
-                className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary hover:bg-primary/20 transition-colors"
-              >
-                {["Price & delivery", "Hinglish bargain", "Late order"][i]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="business">Your business <span className="font-normal text-muted-foreground">(optional)</span></Label>
-            <Input
-              id="business"
-              value={business}
-              onChange={(e) => setBusiness(e.target.value)}
-              maxLength={200}
-              placeholder="e.g. Clothing store in Pune, ships across India"
-              className="rounded-xl"
-            />
-          </div>
-          <div className="space-y-2">
-            <span className="text-sm font-medium leading-none">Reply language</span>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Reply language">
-              {LANGUAGE_OPTIONS.map((option) => (
-                <ChipButton key={option.value} selected={language === option.value} onClick={() => setLanguage(option.value)}>
-                  {option.label}
-                </ChipButton>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <Button type="submit" size="lg" disabled={status === "loading" || message.trim().length < 2}>
-            <MessageCircle className="mr-1 h-4 w-4" />
-            {status === "loading" ? "Writing replies…" : "Write my replies"}
-          </Button>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-            We don't save what you paste - it's only used to write your replies.
-          </p>
-        </div>
-      </form>
-
-      <div ref={resultRef} className="scroll-mt-24 space-y-4">
-        {status === "loading" && (
-          <div className="relative rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card p-6 md:p-8 space-y-5">
-            <BorderBeam duration={6} size={160} />
-            <StatusPill stages={COACH_STAGES} elapsed={elapsed} />
-            <div className="grid gap-3" aria-hidden="true">
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-20 w-full rounded-2xl" />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {status === "error" && (
-          <div className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col items-start gap-4">
-            <p className="text-sm text-muted-foreground">{error}</p>
-            <Button variant="outline" onClick={run}>
-              <RotateCcw className="mr-1 h-4 w-4" />
-              Try again
-            </Button>
-          </div>
-        )}
-
-        {status === "done" && result && lead && (
-          <>
-            <div className="rounded-3xl border border-border bg-card p-6 md:p-8 space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold", lead.className)}>
-                  <lead.icon className="h-4 w-4" />
-                  {lead.label}
-                </span>
-                {result.intent && <span className="text-sm text-muted-foreground">Wants: <span className="font-medium text-foreground">{result.intent}</span></span>}
-              </div>
-              {result.lead.reason && <p className="text-sm text-muted-foreground">{result.lead.reason}</p>}
-            </div>
-
-            {result.replies.map((reply) => (
-              <div key={reply.label} className="rounded-3xl border border-border bg-card p-6 md:p-8 space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">{reply.label}</p>
-                <p className="whitespace-pre-line leading-relaxed">{reply.text}</p>
-                <div className="flex flex-wrap gap-3">
-                  <Button variant="outline" size="sm" onClick={() => copy(reply.text, "Reply copied")}>
-                    <Copy className="h-4 w-4" />
-                    Copy
-                  </Button>
-                  <Button variant="outline" size="sm" className="border-green-600 text-green-700 dark:text-green-500 hover:bg-green-600 hover:text-white" asChild>
-                    <a href={whatsappLink(reply.text)} target="_blank" rel="noopener noreferrer">
-                      <img src={whatsappIcon} alt="" className="h-4 w-4" />
-                      Send on WhatsApp
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            ))}
-            <p className="text-xs text-muted-foreground px-2">"Send on WhatsApp" opens WhatsApp with the reply ready - pick your customer's chat and press send.</p>
-          </>
-        )}
-
-        <a
-          href="https://ascend-aicrm.netlify.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex items-center justify-between gap-4 rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-5 md:p-6 transition-colors hover:bg-primary/10"
-        >
-          <div>
-            <p className="font-semibold">Want this for every WhatsApp lead, automatically?</p>
-            <p className="text-sm text-muted-foreground">Ascend CRM, our AI CRM in development, scores leads and drafts follow-ups from WhatsApp and Gmail.</p>
-          </div>
-          <ArrowRight className="h-5 w-5 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
-        </a>
       </div>
     </div>
   );
@@ -1059,7 +824,7 @@ const ToolIntro = ({ who, get, next }: { who: string; get: string; next: string 
   </div>
 );
 
-const TOOLS = ["blueprint", "xray", "reply"] as const;
+const TOOLS = ["blueprint", "xray"] as const;
 
 const Lab = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1088,7 +853,7 @@ const Lab = () => {
               AI <span className="text-primary">Lab</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Three free AI tools by Appfinity AI Studio - each solves a real business problem in under a minute.
+              Free AI tools by Appfinity AI Studio - each solves a real business problem in under a minute.
             </p>
           </div>
 
@@ -1098,7 +863,7 @@ const Lab = () => {
             className="opacity-0 animate-fade-in"
             style={{ animationDelay: "0.15s" }}
           >
-            <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl p-1.5 mb-8">
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl p-1.5 mb-8">
               <TabsTrigger value="blueprint" className="rounded-xl py-2.5 gap-1.5 sm:gap-2 text-sm md:text-base">
                 <Lightbulb className="h-4 w-4 shrink-0" />
                 <span className="md:hidden">Blueprint</span>
@@ -1108,11 +873,6 @@ const Lab = () => {
                 <Workflow className="h-4 w-4 shrink-0" />
                 <span className="md:hidden">Automate</span>
                 <span className="hidden md:inline">Automation X-Ray</span>
-              </TabsTrigger>
-              <TabsTrigger value="reply" className="rounded-xl py-2.5 gap-1.5 sm:gap-2 text-sm md:text-base">
-                <MessageCircle className="h-4 w-4 shrink-0" />
-                <span className="md:hidden">Replies</span>
-                <span className="hidden md:inline">WhatsApp Reply Coach</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1131,27 +891,6 @@ const Lab = () => {
                 next="Send the plan to our team - we build automations and AI integrations."
               />
               <AutomationXrayTool />
-            </TabsContent>
-            <TabsContent value="reply" forceMount className="mt-0 data-[state=inactive]:hidden">
-              <a
-                href="https://ascend-aicrm.netlify.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group mb-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm transition-colors hover:bg-primary/10"
-              >
-                <img src={ascendLogo} alt="" className="h-8 w-8 shrink-0 rounded-lg" />
-                <span>
-                  <span className="font-semibold">A free preview of Ascend CRM</span>
-                  <span className="text-muted-foreground"> - our AI CRM (in development) that does this for every WhatsApp and Gmail lead.</span>
-                </span>
-                <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
-              </a>
-              <ToolIntro
-                who="Shops and sellers who get customer enquiries on WhatsApp."
-                get="A hot / warm / cold lead score and 3 ready replies in English, Hinglish or Hindi."
-                next="Copy or send a reply in one tap. Want it automatic for every lead? That's Ascend CRM."
-              />
-              <ReplyCoachTool />
             </TabsContent>
           </Tabs>
         </div>

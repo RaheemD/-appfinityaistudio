@@ -50,7 +50,6 @@ In development (not launched yet; the links show the current in-progress version
 ## AI Lab (/lab) - free AI tools, no sign-up
 - App Blueprint (/lab?tool=blueprint): describe an app idea and get a one-page blueprint (MVP features, key screens, tech stack, where AI fits, build roadmap, risks), then send it to the team on WhatsApp or email in one tap.
 - Automation X-Ray (/lab?tool=xray): describe a task you repeat (e.g. copying leads from email into Excel) and get an automation flow - trigger, steps, the tool for each step, what stays human - plus a rough estimate of the hours saved; send the plan to the team on WhatsApp. Leads into our Automation & AI Integrations service.
-- WhatsApp Reply Coach (/lab?tool=reply): a free preview of Ascend CRM. Paste a customer's WhatsApp message and get a hot/warm/cold lead score plus 3 ready-to-send replies in English, Hinglish or Hindi. Pasted messages aren't saved.
 
 ## Blog (/blog)
 - A daily AI-generated spotlight on the latest AI models, plus articles:
