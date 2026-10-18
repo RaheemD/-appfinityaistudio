@@ -39,10 +39,11 @@ const PLATFORMS: Record<string, string> = {
   unsure: "Not sure yet - recommend one",
 };
 
+// The model tends to mirror the customer's language, so each option spells out what NOT to do too.
 const LANGUAGES: Record<string, string> = {
-  english: "natural Indian English",
-  hinglish: "Hinglish - Hindi written in Roman script mixed with English, the way people text on WhatsApp in India",
-  hindi: "Hindi in Devanagari script",
+  english: "English only (natural Indian English). Do not use any Hindi or Hinglish words, even if the customer wrote in Hindi or Hinglish",
+  hinglish: "Hinglish: Hindi written in Roman (English) letters mixed with English words, the way people text on WhatsApp in India",
+  hindi: "Hindi written in Devanagari script (e.g. नमस्ते, कीमत, डिलीवरी). Do not write Hindi words in Roman letters",
 };
 
 const text = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
@@ -176,8 +177,10 @@ Rules:
 - lead.reason: one short sentence in English explaining the score.
 - intent: what the customer wants, in 2-6 English words.
 - replies: exactly 3, with these labels in this order: "${REPLY_LABELS[0]}", "${REPLY_LABELS[1]}", "${REPLY_LABELS[2]}" (the third nudges toward a clear next step - order, booking, call, visit or payment).
-- Each reply: 1-4 sentences, natural WhatsApp style, at most one emoji, ready to send as-is. Write the reply text in ${language}.
-- Never invent facts the business didn't give (prices, stock, delivery times, addresses, policies, discounts). Where such a detail is needed, phrase it so the business can fill it in naturally (e.g. "Let me confirm the exact price and share it with you shortly").
+- Each reply: 1-4 sentences, natural WhatsApp style, at most one emoji, ready to send as-is.
+- Language: write all three replies in ${language}. Follow this even when the customer wrote in a different language.
+- Speak as the business using "we" ("hum" in Hindi/Hinglish), never "I", so the replies suit anyone and avoid gendered verb forms.
+- Never invent facts the business didn't give - prices, stock or availability, delivery times or charges, addresses, policies, discounts. Don't confirm an item is available unless the business details say so. Where such a detail is needed, phrase it so the business can fill it in naturally (e.g. "We'll confirm the exact price and share it with you shortly").
 - If the customer is rude or complaining, stay calm, polite and solution-focused. If they ask for something illegal or harmful, politely decline in all three replies.`;
 
 const extractJson = (content: string) => {
@@ -212,7 +215,7 @@ const replyCoach = async (apiKey: string, body: Record<string, unknown>) => {
   const language = LANGUAGES[languageKey] ?? LANGUAGES.english;
   if (message.length < 2) return json({ error: "Paste the customer's message first." }, 400);
 
-  const userMessage = `Customer's WhatsApp message:\n<<<\n${message}\n>>>\nAbout the business: ${business || "not specified"}`;
+  const userMessage = `Customer's WhatsApp message:\n<<<\n${message}\n>>>\nAbout the business: ${business || "not specified"}\nReply language: ${language}.`;
   const baseBody = {
     model: model(),
     messages: [
