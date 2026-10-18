@@ -2,16 +2,27 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
+  Bell,
+  Bot,
+  Check,
+  Clock,
   Copy,
+  Database,
   Flame,
+  Gift,
   Lightbulb,
   Mail,
   MessageCircle,
+  Play,
   RotateCcw,
   ShieldCheck,
   Snowflake,
   Sparkles,
   ThermometerSun,
+  UserCheck,
+  Users,
+  Workflow,
+  Zap,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -25,6 +36,7 @@ import { BorderBeam } from "@/components/BorderBeam";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import whatsappIcon from "@/assets/WA.png";
+import ascendLogo from "@/assets/ascend.png";
 
 // Free AI tools for visitors. Generated server-side by netlify/functions/lab.mts (GLM 5.3 Flash via
 // OpenRouter). Results go to WhatsApp through click-to-chat links - no WhatsApp API needed.
@@ -628,8 +640,426 @@ const ReplyCoachTool = () => {
 };
 
 // ---------------------------------------------------------------------------------------------
+// Automation X-Ray
+// ---------------------------------------------------------------------------------------------
 
-const TOOLS = ["blueprint", "reply"] as const;
+type XrayStep = { title: string; detail: string; tool: string; kind: "action" | "ai" | "notify" | "store" };
+type XrayResult =
+  | { ok: false; message: string }
+  | {
+      ok: true;
+      title: string;
+      trigger: { title: string; tool: string };
+      steps: XrayStep[];
+      outcome: string;
+      keepHuman: string[];
+      automatableShare: number;
+      complexity: "quick_win" | "moderate" | "custom";
+    };
+
+const XRAY_STAGES: Stage[] = [
+  { at: 0, label: "Reading your task" },
+  { at: 1500, label: "Thinking" },
+  { at: 4000, label: "Mapping the workflow" },
+  { at: 7000, label: "Picking the right tools" },
+  { at: 10000, label: "Estimating time saved" },
+  { at: 14000, label: "Almost there" },
+];
+
+const TASK_EXAMPLES = [
+  { label: "Leads to Excel", text: "Every morning I copy new enquiries from Gmail and our website form into an Excel sheet, then WhatsApp each lead to say we'll call them" },
+  { label: "Payment reminders", text: "Every week we check unpaid invoices in Tally and send reminder messages to each customer one by one" },
+  { label: "Weekly report", text: "Every Monday I pull sales numbers from Shopify and Google Sheets and write a summary email for the team" },
+];
+
+const FREQUENCY_OPTIONS = [
+  { value: "day", label: "a day", perMonth: 22 }, // working days
+  { value: "week", label: "a week", perMonth: 4.33 },
+  { value: "month", label: "a month", perMonth: 1 },
+];
+
+const STEP_KINDS = {
+  action: { icon: Zap, label: "Action" },
+  ai: { icon: Bot, label: "AI step" },
+  notify: { icon: Bell, label: "Notify" },
+  store: { icon: Database, label: "Save" },
+};
+
+const COMPLEXITY = {
+  quick_win: { label: "Quick win", className: "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400" },
+  moderate: { label: "Moderate", className: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+  custom: { label: "Custom build", className: "border-primary/25 bg-primary/10 text-primary" },
+};
+
+const isXrayResult = (value: unknown): value is XrayResult => {
+  const v = value as XrayResult;
+  if (!v || typeof v.ok !== "boolean") return false;
+  return v.ok ? !!v.trigger?.title && Array.isArray(v.steps) && v.steps.length > 0 : typeof (v as { message?: unknown }).message === "string";
+};
+
+const formatHours = (hours: number) => (hours >= 10 ? Math.round(hours) : Math.round(hours * 10) / 10).toString();
+
+const AutomationXrayTool = () => {
+  const [task, setTask] = useState("");
+  const [tools, setTools] = useState("");
+  const [times, setTimes] = useState("");
+  const [frequency, setFrequency] = useState("day");
+  const [minutes, setMinutes] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [result, setResult] = useState<XrayResult | null>(null);
+  const [submittedTask, setSubmittedTask] = useState("");
+  const [error, setError] = useState("");
+  const requestRef = useRef<AbortController | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const elapsed = useElapsed(status === "loading");
+  const copy = useCopy();
+
+  useEffect(() => () => requestRef.current?.abort(), []);
+
+  const run = async (event: FormEvent) => {
+    event.preventDefault();
+    const trimmed = task.trim();
+    if (trimmed.length < 15 || status === "loading") return;
+
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    setSubmittedTask(trimmed);
+    setResult(null);
+    setError("");
+    setStatus("loading");
+    window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+
+    try {
+      const response = await postLab({ tool: "xray", task: trimmed, tools: tools.trim() }, controller.signal);
+      if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) {
+        throw new LabError(await errorMessage(response));
+      }
+      const data = await response.json();
+      if (!isXrayResult(data)) throw new LabError("The AI Lab is busy right now. Please try again.");
+      setResult(data);
+      setStatus("done");
+    } catch (err) {
+      if (requestRef.current !== controller) return;
+      setError(err instanceof LabError ? err.message : "Couldn't reach the AI Lab. Check your connection and try again.");
+      setStatus("error");
+    } finally {
+      window.clearTimeout(timeout);
+      if (requestRef.current === controller) requestRef.current = null;
+    }
+  };
+
+  const reset = () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setStatus("idle");
+    setResult(null);
+    setError("");
+  };
+
+  // Time maths uses only the visitor's own numbers; the AI only estimates the automatable share.
+  const perMonth = FREQUENCY_OPTIONS.find((option) => option.value === frequency)?.perMonth ?? 0;
+  const monthlyHours = Number(times) > 0 && Number(minutes) > 0 ? (Number(times) * perMonth * Number(minutes)) / 60 : null;
+  const plan = result?.ok ? result : null;
+  const hoursBack = plan && monthlyHours !== null ? (monthlyHours * plan.automatableShare) / 100 : null;
+
+  const summary = plan
+    ? [
+        "Hi Appfinity! I ran an Automation X-Ray in your AI Lab and would like help automating this.",
+        "",
+        `Task: ${truncate(submittedTask, 250)}`,
+        `Automation: ${plan.title}`,
+        `Flow: ${[plan.trigger.title, ...plan.steps.map((step) => step.title)].join(" → ")}`,
+        ...(hoursBack !== null ? [`Estimated time back: ~${formatHours(hoursBack)} hours/month`] : []),
+      ].join("\n")
+    : "";
+  const planText = plan
+    ? [
+        plan.title,
+        `When: ${plan.trigger.title}${plan.trigger.tool ? ` (${plan.trigger.tool})` : ""}`,
+        ...plan.steps.map((step, i) => `${i + 1}. ${step.title} - ${step.detail}${step.tool ? ` (${step.tool})` : ""}`),
+        `Result: ${plan.outcome}`,
+        ...(plan.keepHuman.length ? [`Keep a person on: ${plan.keepHuman.join("; ")}`] : []),
+        `Rough estimate: ~${plan.automatableShare}% of the manual work automated`,
+      ].join("\n")
+    : "";
+
+  return (
+    <div className="space-y-8">
+      <form onSubmit={run} className="rounded-3xl border border-border bg-card p-6 md:p-8 space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="task" className="text-base font-semibold">What task do you or your team repeat?</Label>
+          <Textarea
+            id="task"
+            value={task}
+            onChange={(e) => setTask(e.target.value)}
+            maxLength={1200}
+            rows={4}
+            placeholder="e.g. Every evening I copy today's orders from WhatsApp into a Google Sheet and message each customer their delivery time"
+            className="rounded-xl resize-none text-base"
+          />
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-xs text-muted-foreground">Try an example:</span>
+            {TASK_EXAMPLES.map((example) => (
+              <button
+                key={example.label}
+                type="button"
+                onClick={() => setTask(example.text)}
+                className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary hover:bg-primary/20 transition-colors"
+              >
+                {example.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tools">Tools you use today <span className="font-normal text-muted-foreground">(optional)</span></Label>
+          <Input
+            id="tools"
+            value={tools}
+            onChange={(e) => setTools(e.target.value)}
+            maxLength={200}
+            placeholder="e.g. Gmail, Excel, WhatsApp, Tally"
+            className="rounded-xl"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <span className="text-sm font-medium leading-none">
+            How often, and how long it takes <span className="font-normal text-muted-foreground">(optional - to estimate hours saved)</span>
+          </span>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={500}
+              value={times}
+              onChange={(e) => setTimes(e.target.value)}
+              aria-label="How many times"
+              placeholder="5"
+              className="h-10 w-20 rounded-xl"
+            />
+            <span className="text-muted-foreground">times</span>
+            <div className="flex gap-1.5" role="group" aria-label="How often">
+              {FREQUENCY_OPTIONS.map((option) => (
+                <ChipButton key={option.value} selected={frequency === option.value} onClick={() => setFrequency(option.value)}>
+                  {option.label}
+                </ChipButton>
+              ))}
+            </div>
+            <span className="text-muted-foreground">,</span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={600}
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              aria-label="Minutes each time"
+              placeholder="15"
+              className="h-10 w-20 rounded-xl"
+            />
+            <span className="text-muted-foreground">minutes each time</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <Button type="submit" size="lg" disabled={status === "loading" || task.trim().length < 15}>
+            <Workflow className="mr-1 h-4 w-4" />
+            {status === "loading" ? "X-raying your task…" : "X-ray my task"}
+          </Button>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+            Free, no sign-up. Your task isn't saved - it's only used to design the automation.
+          </p>
+        </div>
+      </form>
+
+      <div ref={resultRef} className="scroll-mt-24 space-y-4">
+        {status === "loading" && (
+          <div className="relative rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card p-6 md:p-8 space-y-5">
+            <BorderBeam duration={6} size={160} />
+            <StatusPill stages={XRAY_STAGES} elapsed={elapsed} />
+            <div className="space-y-3" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-xl" />
+                  <Skeleton className="h-12 w-full rounded-2xl" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="rounded-3xl border border-border bg-card p-6 md:p-8 flex flex-col items-start gap-4">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" onClick={run}>
+              <RotateCcw className="mr-1 h-4 w-4" />
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {status === "done" && result && !result.ok && (
+          <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
+            <p className="text-muted-foreground">{(result as { message: string }).message}</p>
+          </div>
+        )}
+
+        {status === "done" && plan && (
+          <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card p-6 md:p-8 space-y-8">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-2xl font-bold">{plan.title}</h3>
+                <span className={cn("rounded-full border px-3 py-1 text-xs font-semibold", COMPLEXITY[plan.complexity].className)}>
+                  {COMPLEXITY[plan.complexity].label}
+                </span>
+              </div>
+              {plan.outcome && <p className="text-muted-foreground">{plan.outcome}</p>}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-background/60 p-5">
+                <p className="text-3xl font-bold text-primary">~{plan.automatableShare}%</p>
+                <p className="text-sm text-muted-foreground">of the manual work automated (rough AI estimate)</p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background/60 p-5">
+                {hoursBack !== null && monthlyHours !== null ? (
+                  <>
+                    <p className="text-3xl font-bold text-primary">~{formatHours(hoursBack)} h</p>
+                    <p className="text-sm text-muted-foreground">
+                      back every month, of the ~{formatHours(monthlyHours)} h you spend on this today
+                    </p>
+                  </>
+                ) : (
+                  <p className="flex h-full items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4 shrink-0" />
+                    Add how often and how long it takes (above) to see the hours you'd get back.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <ol className="relative space-y-3 before:absolute before:left-5 before:top-5 before:bottom-5 before:w-px before:bg-primary/25">
+              <li className="relative flex gap-4">
+                <span className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <Play className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1 rounded-2xl border border-border bg-background/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">When</p>
+                  <p className="font-medium">{plan.trigger.title}</p>
+                  {plan.trigger.tool && <ToolTag>{plan.trigger.tool}</ToolTag>}
+                </div>
+              </li>
+              {plan.steps.map((step, i) => {
+                const kind = STEP_KINDS[step.kind] ?? STEP_KINDS.action;
+                return (
+                  <li key={`${i}-${step.title}`} className="relative flex gap-4">
+                    <span className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-card text-primary">
+                      <kind.icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1 rounded-2xl border border-border bg-background/60 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Step {i + 1} · {kind.label}
+                      </p>
+                      <p className="font-medium">{step.title}</p>
+                      {step.detail && <p className="text-sm text-muted-foreground">{step.detail}</p>}
+                      {step.tool && <ToolTag>{step.tool}</ToolTag>}
+                    </div>
+                  </li>
+                );
+              })}
+              <li className="relative flex gap-4">
+                <span className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-600 text-white">
+                  <Check className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1 rounded-2xl border border-green-500/25 bg-green-500/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">Result</p>
+                  <p className="font-medium">{plan.outcome || "Done automatically"}</p>
+                </div>
+              </li>
+            </ol>
+
+            {plan.keepHuman.length > 0 && (
+              <div className="rounded-2xl border border-border bg-background/60 p-5">
+                <p className="mb-2 flex items-center gap-2 font-semibold">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                  Keep a person on
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {plan.keepHuman.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="border-t border-border pt-6 space-y-4">
+              <p className="font-semibold">Want this running for real? We build automations and AI integrations.</p>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                <Button size="lg" className="bg-green-600 text-white hover:bg-green-700" asChild>
+                  <a href={whatsappLink(summary, STUDIO_WHATSAPP)} target="_blank" rel="noopener noreferrer">
+                    <img src={whatsappIcon} alt="" className="h-5 w-5" />
+                    Send to Appfinity on WhatsApp
+                  </a>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <a href={`mailto:${STUDIO_EMAIL}?subject=${encodeURIComponent("Automation X-Ray from your AI Lab")}&body=${encodeURIComponent(`${summary}\n\n---\n${truncate(planText, 1400)}`)}`}>
+                    <Mail className="h-4 w-4" />
+                    Email it to us
+                  </a>
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => copy(planText, "Plan copied")}>
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </Button>
+                <Button size="lg" variant="ghost" onClick={reset}>
+                  <RotateCcw className="h-4 w-4" />
+                  Start over
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                AI-generated plan and rough estimate - our team will confirm the right setup for your business.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ToolTag = ({ children }: { children: React.ReactNode }) => (
+  <span className="mt-2 inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{children}</span>
+);
+
+// ---------------------------------------------------------------------------------------------
+
+// Spells out who each tool is for and where it leads, so its purpose is clear at a glance.
+const ToolIntro = ({ who, get, next }: { who: string; get: string; next: string }) => (
+  <div className="mb-6 grid divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+    {[
+      { icon: Users, label: "Who it's for", text: who },
+      { icon: Gift, label: "What you get", text: get },
+      { icon: ArrowRight, label: "What happens next", text: next },
+    ].map(({ icon: Icon, label, text }) => (
+      <div key={label} className="p-4">
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+          <Icon className="h-3.5 w-3.5" />
+          {label}
+        </p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{text}</p>
+      </div>
+    ))}
+  </div>
+);
+
+const TOOLS = ["blueprint", "xray", "reply"] as const;
 
 const Lab = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -658,7 +1088,7 @@ const Lab = () => {
               AI <span className="text-primary">Lab</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Free AI tools built by Appfinity AI Studio. Try them on your own ideas and customers - results in seconds.
+              Three free AI tools by Appfinity AI Studio - each solves a real business problem in under a minute.
             </p>
           </div>
 
@@ -668,28 +1098,59 @@ const Lab = () => {
             className="opacity-0 animate-fade-in"
             style={{ animationDelay: "0.15s" }}
           >
-            <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl p-1.5 mb-8">
-              <TabsTrigger value="blueprint" className="rounded-xl py-2.5 gap-2 text-sm sm:text-base">
+            <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl p-1.5 mb-8">
+              <TabsTrigger value="blueprint" className="rounded-xl py-2.5 gap-1.5 sm:gap-2 text-sm md:text-base">
                 <Lightbulb className="h-4 w-4 shrink-0" />
-                App Blueprint
+                <span className="md:hidden">Blueprint</span>
+                <span className="hidden md:inline">App Blueprint</span>
               </TabsTrigger>
-              <TabsTrigger value="reply" className="rounded-xl py-2.5 gap-2 text-sm sm:text-base">
+              <TabsTrigger value="xray" className="rounded-xl py-2.5 gap-1.5 sm:gap-2 text-sm md:text-base">
+                <Workflow className="h-4 w-4 shrink-0" />
+                <span className="md:hidden">Automate</span>
+                <span className="hidden md:inline">Automation X-Ray</span>
+              </TabsTrigger>
+              <TabsTrigger value="reply" className="rounded-xl py-2.5 gap-1.5 sm:gap-2 text-sm md:text-base">
                 <MessageCircle className="h-4 w-4 shrink-0" />
-                <span className="sm:hidden">Reply Coach</span>
-                <span className="hidden sm:inline">WhatsApp Reply Coach</span>
+                <span className="md:hidden">Replies</span>
+                <span className="hidden md:inline">WhatsApp Reply Coach</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="blueprint" forceMount className="mt-0 data-[state=inactive]:hidden">
-              <p className="mb-6 text-muted-foreground">
-                Describe an app idea and get a one-page blueprint: MVP features, key screens, tech stack, where AI fits, and a build roadmap.
-              </p>
+              <ToolIntro
+                who="Founders and businesses with an app or SaaS idea."
+                get="A one-page plan: MVP features, key screens, tech stack, where AI fits and a build roadmap."
+                next="Send it to our team on WhatsApp in one tap - we design and build apps like this."
+              />
               <BlueprintTool />
             </TabsContent>
+            <TabsContent value="xray" forceMount className="mt-0 data-[state=inactive]:hidden">
+              <ToolIntro
+                who="Businesses that repeat the same task every day or week - data entry, follow-ups, reports."
+                get="An automation flow for your task, the right tool for each step, and the hours you could get back."
+                next="Send the plan to our team - we build automations and AI integrations."
+              />
+              <AutomationXrayTool />
+            </TabsContent>
             <TabsContent value="reply" forceMount className="mt-0 data-[state=inactive]:hidden">
-              <p className="mb-6 text-muted-foreground">
-                Paste a customer's WhatsApp message and get a lead score plus three ready-to-send replies - in English, Hinglish or Hindi.
-              </p>
+              <a
+                href="https://ascend-aicrm.netlify.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group mb-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm transition-colors hover:bg-primary/10"
+              >
+                <img src={ascendLogo} alt="" className="h-8 w-8 shrink-0 rounded-lg" />
+                <span>
+                  <span className="font-semibold">A free preview of Ascend CRM</span>
+                  <span className="text-muted-foreground"> - our AI CRM (in development) that does this for every WhatsApp and Gmail lead.</span>
+                </span>
+                <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
+              </a>
+              <ToolIntro
+                who="Shops and sellers who get customer enquiries on WhatsApp."
+                get="A hot / warm / cold lead score and 3 ready replies in English, Hinglish or Hindi."
+                next="Copy or send a reply in one tap. Want it automatic for every lead? That's Ascend CRM."
+              />
               <ReplyCoachTool />
             </TabsContent>
           </Tabs>

@@ -386,10 +386,10 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
         };
     }
 
-    if (/\b(lab|blueprint|reply coach)\b/.test(normalized)) {
+    if (/\b(lab|blueprint|x ray|xray|reply coach)\b/.test(normalized)) {
         return {
             content:
-                "Try our free AI Lab (/lab):\n\n• App Blueprint - turn your app idea into a one-page plan (/lab?tool=blueprint)\n• WhatsApp Reply Coach - get a lead score and 3 ready replies in English, Hinglish or Hindi (/lab?tool=reply)",
+                "Try our free AI Lab (/lab):\n\n• App Blueprint - turn your app idea into a one-page plan (/lab?tool=blueprint)\n• Automation X-Ray - see how to automate a task you repeat (/lab?tool=xray)\n• WhatsApp Reply Coach - a free preview of Ascend CRM: lead score + 3 ready replies (/lab?tool=reply)",
         };
     }
 
