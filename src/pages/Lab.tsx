@@ -190,7 +190,9 @@ const blueprintSummary = (idea: string, markdown: string) => {
     "",
     `My idea: ${truncate(idea, 300)}`,
   ];
-  if (features.length) lines.push("", "MVP features:", ...features.map((feature) => `• ${truncate(feature, 90)}`));
+  // Just the feature names ("WhatsApp order capture — a shareable link…" -> "WhatsApp order capture").
+  const names = features.map((feature) => feature.split(/\s+[—–-]\s+|:\s+/)[0]);
+  if (names.length) lines.push("", "MVP features:", ...names.map((name) => `• ${truncate(name, 90)}`));
   return lines.join("\n");
 };
 
