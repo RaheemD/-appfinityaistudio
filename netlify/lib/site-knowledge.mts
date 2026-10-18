@@ -47,6 +47,10 @@ In development (not launched yet; the links show the current in-progress version
 - Pricing depends on scope, timeline and complexity. There is no public price list — the team shares a proposal after understanding the project.
 - Technologies we use (from our engineering blog): React, TypeScript, Tailwind CSS, Radix UI, TanStack Query for web apps; n8n and Zapier for automation; AI/ML models for personalization and intelligent features.
 
+## AI Lab (/lab) - free AI tools, no sign-up
+- App Blueprint (/lab?tool=blueprint): describe an app idea and get a one-page blueprint (MVP features, key screens, tech stack, where AI fits, build roadmap, risks), then send it to the team on WhatsApp or email in one tap.
+- WhatsApp Reply Coach (/lab?tool=reply): paste a customer's WhatsApp message and get a hot/warm/cold lead score plus 3 ready-to-send replies in English, Hinglish or Hindi. Pasted messages aren't saved.
+
 ## Blog (/blog)
 - A daily AI-generated spotlight on the latest AI models, plus articles:
   - "Building AI-Powered Fitness Applications" (/blog/building-ai-fitness-apps) — lessons from FitnessMate: adaptive plans, quality input data, fast inference, explaining AI decisions to users.
@@ -60,7 +64,7 @@ In development (not launched yet; the links show the current in-progress version
 - Contact form: /contact. We typically respond within 1-2 business days; mark urgent matters in the message.
 
 ## Website pages
-Home (/), Products (/products), Services (/services), Blog (/blog), About (/about), Contact (/contact), Privacy Policy (/privacy), Terms of Service (/terms).
+Home (/), Products (/products), Services (/services), AI Lab (/lab), Blog (/blog), About (/about), Contact (/contact), Privacy Policy (/privacy), Terms of Service (/terms).
 
 ## Legal summary
 - Privacy: we collect only what visitors provide (e.g. name, email) and basic usage data; we do not sell personal data; services are not directed at children under 13; visitors can ask to access, correct or delete their data. Full policy: /privacy

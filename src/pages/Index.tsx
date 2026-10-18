@@ -1,4 +1,4 @@
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Lightbulb, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
@@ -127,6 +127,53 @@ const Index = () => {
                 <p className="text-muted-foreground leading-relaxed">{service.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* AI Lab teaser */}
+      <section className="pb-16 md:pb-24">
+        <div className="container">
+          <div className="relative mx-auto max-w-5xl overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-accent/5 p-8 md:p-12 opacity-0 animate-fade-in">
+            <div className="grid gap-8 md:grid-cols-2 md:items-center">
+              <div className="space-y-4">
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  NEW · FREE AI TOOLS
+                </span>
+                <h2 className="text-3xl md:text-4xl font-bold">Try our AI Lab</h2>
+                <p className="text-lg text-muted-foreground">
+                  Turn your app idea into a blueprint, or let AI write your WhatsApp replies - free, no sign-up.
+                </p>
+                <Button size="lg" className="group" asChild>
+                  <Link to="/lab">
+                    Open the AI Lab
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </div>
+              <div className="grid gap-3">
+                {[
+                  { to: "/lab?tool=blueprint", icon: Lightbulb, title: "App Blueprint", text: "Idea in, one-page product plan out." },
+                  { to: "/lab?tool=reply", icon: MessageCircle, title: "WhatsApp Reply Coach", text: "Lead score + 3 replies in English, Hinglish or Hindi." },
+                ].map((tool) => (
+                  <Link
+                    key={tool.to}
+                    to={tool.to}
+                    className="group flex items-center gap-4 rounded-2xl border border-border bg-background/70 p-5 transition-[border-color,scale] hover:border-primary/40 active:[scale:0.985]"
+                  >
+                    <div className="w-11 h-11 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <tool.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold">{tool.title}</p>
+                      <p className="text-sm text-muted-foreground">{tool.text}</p>
+                    </div>
+                    <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

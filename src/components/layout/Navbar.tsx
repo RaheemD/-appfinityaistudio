@@ -11,6 +11,7 @@ const navLinks = [
     { href: "/", label: "Home" },
     { href: "/products", label: "Products" },
     { href: "/services", label: "Services" },
+    { href: "/lab", label: "AI Lab" },
     { href: "/blog", label: "Blog" },
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
@@ -33,19 +34,19 @@ export function Navbar() {
                         <div className="absolute inset-0 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
                     {/* Slightly smaller on phones so it fits beside the WhatsApp, theme and menu buttons */}
-                    <span className="whitespace-nowrap text-sm max-[359px]:leading-tight min-[375px]:text-[15px] min-[390px]:text-base sm:text-lg md:text-base lg:text-lg font-semibold text-foreground">
+                    <span className="whitespace-nowrap text-sm max-[359px]:leading-tight min-[375px]:text-[15px] min-[390px]:text-base sm:text-lg font-semibold text-foreground">
                         Appfinity <span className="max-[359px]:block">AI Studio</span>
                     </span>
                 </Link>
 
-                {/* Desktop Navigation */}
-                <nav className="hidden md:flex md:items-center md:gap-1">
+                {/* Laptop & desktop navigation (lg+): 7 links need the room; tablets use the menu button */}
+                <nav className="hidden lg:flex lg:items-center lg:gap-1">
                     {navLinks.map((link) => (
                         <Link
                             key={link.href}
                             to={link.href}
                             className={cn(
-                                "relative px-2.5 lg:px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg group",
+                                "relative px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg group",
                                 location.pathname === link.href
                                     ? "text-primary"
                                     : "text-muted-foreground hover:text-foreground"
@@ -54,7 +55,7 @@ export function Navbar() {
                             {link.label}
                             <span
                                 className={cn(
-                                    "absolute bottom-1 left-2.5 right-2.5 lg:left-4 lg:right-4 h-0.5 bg-primary rounded-full transition-transform duration-200 origin-left",
+                                    "absolute bottom-1 left-4 right-4 h-0.5 bg-primary rounded-full transition-transform duration-200 origin-left",
                                     location.pathname === link.href
                                         ? "scale-x-100"
                                         : "scale-x-0 group-hover:scale-x-100"
@@ -75,8 +76,8 @@ export function Navbar() {
                     <ThemeToggle />
                 </nav>
 
-                {/* Mobile Menu Button */}
-                <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:hidden">
+                {/* Phone & tablet menu button */}
+                <div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:hidden">
                     <Button variant="outline" size="icon" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white" asChild>
                         <a
                             href="https://wa.me/919321364060"
@@ -107,8 +108,8 @@ export function Navbar() {
             {/* Mobile Navigation */}
             <div
                 className={cn(
-                    "overflow-hidden transition-all duration-300 ease-out md:hidden",
-                    isOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+                    "overflow-hidden transition-all duration-300 ease-out lg:hidden",
+                    isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                 )}
             >
                 <nav className="border-t border-border bg-background">

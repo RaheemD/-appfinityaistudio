@@ -386,6 +386,13 @@ const getFallbackResponse = (userMessage: string, currentConversation: Conversat
         };
     }
 
+    if (/\b(lab|blueprint|reply coach)\b/.test(normalized)) {
+        return {
+            content:
+                "Try our free AI Lab (/lab):\n\n• App Blueprint - turn your app idea into a one-page plan (/lab?tool=blueprint)\n• WhatsApp Reply Coach - get a lead score and 3 ready replies in English, Hinglish or Hindi (/lab?tool=reply)",
+        };
+    }
+
     if (/\b(privacy|terms)\b/.test(normalized)) {
         return {
             content:
