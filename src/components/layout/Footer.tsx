@@ -96,6 +96,9 @@ export function Footer() {
             <span className="block sm:inline">MSME Registered | Govt. of India</span>
             <span className="block sm:inline"> Udyam Reg. No: UDYAM-MH-18-0507003</span>
           </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            GSTIN: 27AMDPD1089R1ZM
+          </p>
         </div>
       </div>
     </footer>
