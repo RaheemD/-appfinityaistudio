@@ -121,3 +121,38 @@ export const toTextStream = (upstream: ReadableStream<Uint8Array>, label: string
     },
   });
 };
+
+export type KeyUsage = {
+  usage: number; // credits (USD) used, all time
+  usage_daily: number; // current UTC day
+  usage_weekly: number;
+  usage_monthly: number;
+  limit: number | null;
+  limit_remaining: number | null;
+};
+
+// Spend for the API key (GET /api/v1/key). Returns null if it can't be read.
+export const fetchKeyUsage = async (apiKey: string | undefined): Promise<KeyUsage | null> => {
+  if (!apiKey) return null;
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/key", {
+      signal: AbortSignal.timeout(8_000),
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = (await response.json())?.data;
+    if (typeof data?.usage !== "number") throw new Error("unexpected response");
+    const number = (value: unknown) => (typeof value === "number" ? value : 0);
+    return {
+      usage: data.usage,
+      usage_daily: number(data.usage_daily),
+      usage_weekly: number(data.usage_weekly),
+      usage_monthly: number(data.usage_monthly),
+      limit: typeof data.limit === "number" ? data.limit : null,
+      limit_remaining: typeof data.limit_remaining === "number" ? data.limit_remaining : null,
+    };
+  } catch (error) {
+    console.error("[openrouter] key usage unavailable:", error instanceof Error ? error.message : error);
+    return null;
+  }
+};

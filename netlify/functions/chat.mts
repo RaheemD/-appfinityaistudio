@@ -20,6 +20,7 @@ import {
   textStreamResponse,
   toTextStream,
 } from "../lib/openrouter.mts";
+import { alertOwner, inBackground } from "../lib/owner-alerts.mts";
 import { CONTACT, SITE_KNOWLEDGE } from "../lib/site-knowledge.mts";
 
 // Streaming functions are limited to 60s on Netlify.
@@ -42,6 +43,22 @@ export const config = {
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const overDailyLimit = createDailyLimiter(DAILY_MESSAGES_PER_IP);
+
+// A visitor asking about price or hiring is a warm lead: tell the owner's Telegram bot, at most
+// once per visitor every 30 minutes (per instance).
+const BUYING_INTENT =
+  /\b(pric(e|es|ing)|costs?|quot(e|es|ation)|budget|charges?|fees?|estimate|proposal|hire|hiring|how much|kitna|talk to (the |your )?team|(schedule|book) a call)\b/i;
+const LEAD_ALERT_GAP_MS = 30 * 60 * 1000;
+const lastLeadAlert = new Map<string, number>();
+
+const isNewLead = (ip: string, message: string) => {
+  if (!BUYING_INTENT.test(message)) return false;
+  const now = Date.now();
+  if (now - (lastLeadAlert.get(ip) ?? 0) < LEAD_ALERT_GAP_MS) return false;
+  if (lastLeadAlert.size > 5_000) lastLeadAlert.clear();
+  lastLeadAlert.set(ip, now);
+  return true;
+};
 
 // Accepts [{ role, content }...] ending with a user message; returns null if malformed.
 const parseMessages = (body: unknown): ChatMessage[] | null => {
@@ -110,7 +127,7 @@ ${SITE_KNOWLEDGE}
 ${models}`.trim();
 };
 
-export default async (req: Request, context?: { ip?: string }) => {
+export default async (req: Request, context?: { ip?: string; waitUntil?: (promise: Promise<unknown>) => void }) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   // Only the website itself may call this endpoint from a browser.
@@ -133,7 +150,8 @@ export default async (req: Request, context?: { ip?: string }) => {
   if (!messages) return json({ error: "Invalid request" }, 400);
 
   const now = new Date();
-  if (overDailyLimit(clientIp(req, context))) {
+  const ip = clientIp(req, context);
+  if (overDailyLimit(ip)) {
     return json({ error: "Daily message limit reached" }, 429);
   }
 
@@ -162,6 +180,18 @@ export default async (req: Request, context?: { ip?: string }) => {
     const detail = (await upstream.text().catch(() => "")).slice(0, 500);
     console.error(`[chat] OpenRouter HTTP ${upstream.status}: ${detail}`);
     return json({ error: "Chat temporarily unavailable" }, 502);
+  }
+
+  const question = messages[messages.length - 1].content;
+  if (isNewLead(ip, question)) {
+    const earlier = messages.filter((message) => message.role === "user").length - 1;
+    await inBackground(
+      context,
+      alertOwner("chat", [
+        ["Asked", question],
+        ["Conversation", earlier > 0 ? `${earlier} earlier message${earlier === 1 ? "" : "s"} from this visitor` : ""],
+      ]),
+    );
   }
 
   return textStreamResponse(toTextStream(upstream.body, "chat"));

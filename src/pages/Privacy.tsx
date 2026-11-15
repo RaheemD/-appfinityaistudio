@@ -24,7 +24,7 @@ const Privacy = () => {
               className="text-muted-foreground mb-10 opacity-0 animate-fade-in"
               style={{ animationDelay: "0.3s" }}
             >
-              Last updated: December 2024
+              Last updated: November 2026
             </p>
 
             <div 
@@ -61,6 +61,12 @@ const Privacy = () => {
                       <h3 className="text-lg font-medium text-foreground mb-2">Usage Data</h3>
                       <p className="leading-relaxed">
                         We may automatically collect certain information when you access our website or applications, including your IP address, browser type, operating system, access times, and the pages you have viewed.
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-foreground mb-2">AI Lab and Chat Assistant</h3>
+                      <p className="leading-relaxed">
+                        What you type into our AI Lab tools and website chat assistant is processed by our AI provider to generate your result. App ideas and tasks you submit in the AI Lab, and chat messages asking about pricing or working with us, are also shared with our team so we can follow up, and are kept for up to 30 days. Please don't include confidential or sensitive personal information.
                       </p>
                     </div>
                     <div>

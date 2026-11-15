@@ -3,7 +3,8 @@
 //   - "xray":      Automation X-Ray - designs an automation flow for a repetitive task (JSON).
 //
 // Runs server-side on Netlify so the OpenRouter API key never reaches the browser.
-// Nothing visitors type is stored or logged here.
+// Each use is shared with the studio owner's Telegram bot (../lib/owner-alerts.mts) and kept for
+// 30 days for the daily digest - the page tells visitors their idea/task is shared with the team.
 //
 // Required env var: OPENROUTER_API_KEY (see chat.mts). Optional: OPENROUTER_LAB_MODEL.
 
@@ -17,6 +18,9 @@ import {
   textStreamResponse,
   toTextStream,
 } from "../lib/openrouter.mts";
+import { alertOwner, inBackground } from "../lib/owner-alerts.mts";
+
+type FunctionContext = { ip?: string; waitUntil?: (promise: Promise<unknown>) => void };
 
 export const config = {
   path: "/api/lab",
@@ -86,7 +90,7 @@ One or two sentences: the sharpened value proposition.
 ## Risks to Watch
 - 3 bullets`;
 
-const blueprint = async (apiKey: string, body: Record<string, unknown>) => {
+const blueprint = async (apiKey: string, body: Record<string, unknown>, context?: FunctionContext) => {
   const idea = text(body.idea, 1500);
   const audience = text(body.audience, 200);
   const platform = PLATFORMS[text(body.platform, 20)] ?? PLATFORMS.unsure;
@@ -122,6 +126,14 @@ const blueprint = async (apiKey: string, body: Record<string, unknown>) => {
     console.error(`[lab] blueprint OpenRouter HTTP ${upstream.status}: ${(await upstream.text().catch(() => "")).slice(0, 300)}`);
     return json({ error: "The AI Lab is busy right now. Please try again." }, 502);
   }
+  await inBackground(
+    context,
+    alertOwner("blueprint", [
+      ["Idea", idea],
+      ["For", audience],
+      ["Platform", platform],
+    ]),
+  );
   return textStreamResponse(toTextStream(upstream.body, "lab"));
 };
 
@@ -137,13 +149,14 @@ const extractJson = (content: string) => {
 };
 
 // Asks for a JSON answer: first from providers that enforce the schema, then with plain JSON
-// instructions. `normalize` validates the result (throwing rejects that attempt).
+// instructions. `normalize` validates the result (throwing rejects that attempt). Returns null if
+// neither attempt produced a valid answer.
 const structuredAnswer = async <T,>(
   apiKey: string,
   label: string,
   request: { system: string; user: string; schema: object; maxTokens: number; temperature: number },
   normalize: (raw: unknown) => T,
-) => {
+): Promise<T | null> => {
   const baseBody = {
     model: model(),
     messages: [
@@ -172,12 +185,12 @@ const structuredAnswer = async <T,>(
       }
       const data = await response.json();
       const content = String(data?.choices?.[0]?.message?.content ?? "");
-      return json(normalize(extractJson(content)), 200);
+      return normalize(extractJson(content));
     } catch (error) {
       console.error(`[lab] ${label} attempt ${i + 1} failed:`, error instanceof Error ? error.message : error);
     }
   }
-  return json({ error: "The AI Lab is busy right now. Please try again." }, 502);
+  return null;
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -286,12 +299,12 @@ const normalizeXray = (raw: unknown): XrayResult => {
   };
 };
 
-const automationXray = (apiKey: string, body: Record<string, unknown>) => {
+const automationXray = async (apiKey: string, body: Record<string, unknown>, context?: FunctionContext) => {
   const task = text(body.task, 1200);
   const tools = text(body.tools, 200);
   if (task.length < 15) return json({ error: "Please describe the task in a little more detail." }, 400);
 
-  return structuredAnswer(
+  const result = await structuredAnswer(
     apiKey,
     "automation x-ray",
     {
@@ -303,16 +316,29 @@ const automationXray = (apiKey: string, body: Record<string, unknown>) => {
     },
     normalizeXray,
   );
+  if (!result) return json({ error: "The AI Lab is busy right now. Please try again." }, 502);
+
+  if (result.ok) {
+    await inBackground(
+      context,
+      alertOwner("xray", [
+        ["Task", task],
+        ["Tools", tools],
+        ["Plan", `${result.title} (~${result.automatableShare}% automatable)`],
+      ]),
+    );
+  }
+  return json(result, 200);
 };
 
 // ---------------------------------------------------------------------------------------------
 
-const TOOLS = new Map<string, (apiKey: string, body: Record<string, unknown>) => Promise<Response> | Response>([
+const TOOLS = new Map<string, (apiKey: string, body: Record<string, unknown>, context?: FunctionContext) => Promise<Response>>([
   ["blueprint", blueprint],
   ["xray", automationXray],
 ]);
 
-export default async (req: Request, context?: { ip?: string }) => {
+export default async (req: Request, context?: FunctionContext) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!isSameOrigin(req)) return json({ error: "Forbidden" }, 403);
 
@@ -340,5 +366,5 @@ export default async (req: Request, context?: { ip?: string }) => {
     return json({ error: "You've used the AI Lab a lot today - please come back tomorrow." }, 429);
   }
 
-  return handler(apiKey, body);
+  return handler(apiKey, body, context);
 };

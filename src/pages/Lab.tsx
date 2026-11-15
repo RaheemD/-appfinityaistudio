@@ -324,7 +324,7 @@ const BlueprintTool = () => {
           </Button>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-            Free, no sign-up. Your idea isn't saved - it's only used to write your blueprint.
+            Free, no sign-up. Your idea is shared with our team so we can help you build it.
           </p>
         </div>
       </form>
@@ -639,7 +639,7 @@ const AutomationXrayTool = () => {
           </Button>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-            Free, no sign-up. Your task isn't saved - it's only used to design the automation.
+            Free, no sign-up. Your task is shared with our team so we can help you automate it.
           </p>
         </div>
       </form>
