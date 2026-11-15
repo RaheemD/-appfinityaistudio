@@ -284,7 +284,10 @@ export const writePost = async (theme: Theme, recent: string[], now: Date, deadl
     model: process.env.OPENROUTER_CHANNEL_MODEL || DEFAULT_MODEL,
     messages: [
       { role: "system", content: SYSTEM.replace("{RECENT}", recent.length ? recent.map((t) => `"${t}"`).join(", ") : "none yet") },
-      { role: "user", content: `Today is ${today}. Theme: ${theme.label}.\n\n${brief}${facts ? `\n\nFacts you may use:\n${facts}` : ""}` },
+      {
+        role: "user",
+        content: `Today is ${today}. Theme: ${theme.label}.\n\n${brief}${facts ? `\n\nFacts you may use:\n${facts}` : ""}\n\nThe button under the post says "${button.text}". Your closing line must invite readers to do exactly that (for example "Tap the button below to ..."). Don't suggest other actions such as contacting the team.`,
+      },
     ],
     reasoning: { effort: "low", exclude: true },
     max_tokens: 1_200,
