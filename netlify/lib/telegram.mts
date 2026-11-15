@@ -79,6 +79,8 @@ export const BOT_COMMANDS = [
   { command: "cost", description: "AI spend (OpenRouter)" },
   { command: "status", description: "Check all sites now" },
   { command: "digest", description: "Yesterday's digest" },
+  { command: "preview", description: "Preview a channel post (not published)" },
+  { command: "post", description: "Write and publish a channel post now" },
   { command: "help", description: "What this bot does" },
 ];
 
