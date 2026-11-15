@@ -66,7 +66,7 @@ const Privacy = () => {
                     <div>
                       <h3 className="text-lg font-medium text-foreground mb-2">AI Lab and Chat Assistant</h3>
                       <p className="leading-relaxed">
-                        What you type into our AI Lab tools and website chat assistant is processed by our AI provider to generate your result. App ideas and tasks you submit in the AI Lab, and chat messages asking about pricing or working with us, are also shared with our team so we can follow up, and are kept for up to 30 days. Please don't include confidential or sensitive personal information.
+                        What you type into our AI Lab tools and website chat assistant is processed by our AI provider to generate your result. App ideas and tasks you submit in the AI Lab are also shared with our team so we can follow up. If you ask the chat assistant about pricing or working with us, that conversation, including your next messages for a while, is shared with our team, and a team member may join the chat to reply to you personally. We keep these records for up to 30 days. Please don't include confidential or sensitive personal information.
                       </p>
                     </div>
                     <div>

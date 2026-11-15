@@ -67,6 +67,6 @@ In development (not launched yet; the links show the current in-progress version
 Home (/), Products (/products), Services (/services), AI Lab (/lab), Blog (/blog), About (/about), Contact (/contact), Privacy Policy (/privacy), Terms of Service (/terms).
 
 ## Legal summary
-- Privacy: we collect only what visitors provide (e.g. name, email) and basic usage data; ideas and tasks entered in the AI Lab, and chat questions about pricing or working with us, are shared with our team and kept for up to 30 days; we do not sell personal data; services are not directed at children under 13; visitors can ask to access, correct or delete their data. Full policy: /privacy
+- Privacy: we collect only what visitors provide (e.g. name, email) and basic usage data; ideas and tasks entered in the AI Lab are shared with our team; if a visitor asks the chat about pricing or working with us, that chat is shared with our team and a team member may join it to reply personally; these records are kept for up to 30 days; we do not sell personal data; services are not directed at children under 13; visitors can ask to access, correct or delete their data. Full policy: /privacy
 - Terms: services provided "as is"; in-app purchases follow Apple App Store / Google Play policies. Full terms: /terms
 `.trim();

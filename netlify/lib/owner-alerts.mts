@@ -24,24 +24,31 @@ const underBurstLimit = () => {
   return true;
 };
 
+// The Telegram message id of a delivered message, or null.
+export const telegramMessageId = (sent: { ok: boolean; result?: unknown } | void | null) => {
+  const id = (sent?.result as { message_id?: unknown } | undefined)?.message_id;
+  return sent?.ok && typeof id === "number" ? id : null;
+};
+
 // `fields` are [label, visitor text] pairs; empty values are skipped. The first field is the headline.
-export const alertOwner = async (type: EventType, fields: [string, string][]) => {
-  if (!botToken()) return;
+// `footerHtml` is appended as-is (already-escaped Telegram HTML). Returns the alert's Telegram
+// message id, or null if it wasn't delivered.
+export const alertOwner = async (type: EventType, fields: [string, string][], footerHtml = "") => {
+  if (!botToken()) return null;
   const shown = fields.filter(([, value]) => value.trim());
   const label = EVENT_LABELS[type];
+  const lines = [`${label.emoji} <b>${label.one}</b>`, ...shown.map(([name, value]) => `<b>${escapeHtml(name)}:</b> ${escapeHtml(truncate(value, 900))}`)];
+  if (footerHtml) lines.push(footerHtml);
 
-  await Promise.all([
+  const [, sent] = await Promise.all([
     recordEvent({
       type,
       title: truncate(shown[0]?.[1] ?? label.one, 140),
       detail: truncate(shown.slice(1).map(([name, value]) => `${name}: ${value}`).join(" · "), 400),
     }),
-    underBurstLimit()
-      ? sendToOwner(
-          [`${label.emoji} <b>${label.one}</b>`, ...shown.map(([name, value]) => `<b>${escapeHtml(name)}:</b> ${escapeHtml(truncate(value, 900))}`)].join("\n"),
-        )
-      : Promise.resolve(),
+    underBurstLimit() ? sendToOwner(lines.join("\n")) : Promise.resolve(null),
   ]);
+  return telegramMessageId(sent);
 };
 
 type FunctionContext = { waitUntil?: (promise: Promise<unknown>) => void };

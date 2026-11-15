@@ -52,12 +52,13 @@ export const requestOpenRouter = (apiKey: string, body: Record<string, unknown>,
     body: JSON.stringify(body),
   });
 
-export const textStreamResponse = (stream: ReadableStream<Uint8Array>) =>
+export const textStreamResponse = (stream: ReadableStream<Uint8Array> | string, extraHeaders: Record<string, string> = {}) =>
   new Response(stream, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
+      ...extraHeaders,
     },
   });
 

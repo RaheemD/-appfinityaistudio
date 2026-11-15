@@ -5,9 +5,11 @@
 //
 // Only the chat in TELEGRAM_CHAT_ID gets answers. Setup: see netlify/lib/telegram.mts.
 
+import { addOwnerMessage, chatState, conversationForTelegramMessage, endTakeover, linkTelegramMessage } from "../lib/live-chat.mts";
 import { json } from "../lib/openrouter.mts";
 import { istDay } from "../lib/ops-store.mts";
 import { activityReport, costReport, digestReport, leadsReport, statusReport } from "../lib/owner-reports.mts";
+import { telegramMessageId } from "../lib/owner-alerts.mts";
 import { botToken, ensureWebhook, isWebhookSecret, ownerChatId, sendMessage } from "../lib/telegram.mts";
 
 export const config = {
@@ -23,7 +25,51 @@ I message you when a visitor uses the AI Lab, sends the contact form or asks the
 /leads - latest 10 leads
 /cost - AI spend (OpenRouter)
 /status - check all sites now
-/digest - yesterday's digest`;
+/digest - yesterday's digest
+
+<b>Live chat:</b> when a chat visitor asks about pricing, use Telegram's <b>Reply</b> on that alert and your answer appears in their website chat. While you're answering, the AI stays quiet and their messages come here. Reply <code>/end</code> to hand the chat back to the AI.`;
+
+const MAX_REPLY_CHARS = 2_000;
+const VISITOR_AWAY_MS = 90_000;
+
+type OwnerMessage = { message_id?: number; reply_to_message?: { message_id?: number } };
+
+// The owner replied to a chat alert (or a forwarded visitor message): send it to that visitor.
+// Returns false if the replied-to message isn't part of a live chat.
+const handleChatReply = async (chatId: number, message: OwnerMessage, text: string) => {
+  const repliedTo = message.reply_to_message?.message_id;
+  if (typeof repliedTo !== "number") return false;
+  const conversationId = await conversationForTelegramMessage(repliedTo);
+  if (!conversationId) return false;
+
+  const state = await chatState(conversationId);
+  const command = text.split(/\s+/)[0].split("@")[0].toLowerCase();
+  let confirmation: string;
+
+  if (command === "/end") {
+    confirmation = (await endTakeover(conversationId))
+      ? "🤖 Handed back to the AI. It will answer this visitor's next message."
+      : "⚠️ Couldn't update the chat. Please try again.";
+  } else if (text.startsWith("/")) {
+    confirmation = "That looks like a command. To message the visitor, reply with plain text. Reply <code>/end</code> to hand the chat back to the AI.";
+  } else if (text.length > MAX_REPLY_CHARS) {
+    confirmation = `⚠️ That's too long for the chat (max ${MAX_REPLY_CHARS} characters). Please send a shorter reply.`;
+  } else if (!(await addOwnerMessage(conversationId, text))) {
+    confirmation = "⚠️ Couldn't deliver that. Please try again.";
+  } else {
+    const away = !state?.lastSeenAt || Date.now() - state.lastSeenAt > VISITOR_AWAY_MS;
+    const awayNote = away ? "\n⚠️ Their chat doesn't seem to be open right now, so they may not see this." : "";
+    confirmation = state?.ownerMessages
+      ? `✅ Sent${awayNote}`
+      : `✅ Sent to the visitor's chat. The AI is paused while you answer; their next messages will come here. Reply <code>/end</code> to hand back to the AI.${awayNote}`;
+  }
+
+  const sent = await sendMessage(chatId, confirmation);
+  // Replying to your own message or to the confirmation also reaches the same visitor.
+  const links = [message.message_id, telegramMessageId(sent)].filter((id): id is number => typeof id === "number");
+  await Promise.all(links.map((id) => linkTelegramMessage(id, conversationId)));
+  return true;
+};
 
 const answer = (command: string) => {
   switch (command) {
@@ -61,7 +107,7 @@ export default async (req: Request) => {
 
   if (!isWebhookSecret(req.headers.get("x-telegram-bot-api-secret-token"))) return json({ error: "Forbidden" }, 403);
 
-  let update: { message?: { chat?: { id?: number }; text?: unknown } };
+  let update: { message?: OwnerMessage & { chat?: { id?: number }; text?: unknown } };
   try {
     update = await req.json();
   } catch {
@@ -85,6 +131,13 @@ export default async (req: Request) => {
   }
 
   try {
+    if (update.message?.reply_to_message) {
+      if (await handleChatReply(chatId, update.message, text)) return OK();
+      if (!text.startsWith("/")) {
+        await sendMessage(chatId, "That message isn't linked to a website chat, so your reply wasn't sent. Use <b>Reply</b> on a 💬 chat alert.");
+        return OK();
+      }
+    }
     await sendMessage(chatId, await answer(command));
   } catch (error) {
     console.error("[telegram] command failed:", error);

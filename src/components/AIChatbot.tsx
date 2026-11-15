@@ -1,14 +1,20 @@
-import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Sparkles, Loader2, RotateCcw } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { MessageCircle, X, Send, Sparkles, Loader2, RotateCcw, UserRound, BellRing, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 
+// "team" = a reply from the Appfinity team sent from Telegram (live chat takeover).
+// "note" = a small status line in the chat; never sent to the AI.
 interface Message {
-    role: "user" | "assistant";
+    role: "user" | "assistant" | "team" | "note";
     content: string;
     timestamp: Date;
+    liveId?: string; // team messages: id from /api/chat-live
+    sentToTeam?: boolean; // user messages delivered to the team instead of the AI
 }
+
+const MESSAGE_ROLES = new Set(["user", "assistant", "team", "note"]);
 
 type AIResponse = {
     content: string;
@@ -41,6 +47,93 @@ const CHAT_HISTORY_LIMIT = 12;
 const MAX_INPUT_CHARS = 2000;
 const CHAT_STORAGE_KEY = "appfinity:chat:v1";
 
+// Live chat takeover (netlify/lib/live-chat.mts): once a visitor asks about pricing or hiring, the
+// team is alerted on Telegram and can reply; the widget checks /api/chat-live for those replies.
+const LIVE_ENDPOINT = "/api/chat-live";
+const LIVE_STORAGE_KEY = "appfinity:chat-live:v1";
+const LIVE_IDLE_MS = 30 * 60 * 1000; // stop checking after this long without activity
+const LIVE_FAST_POLL_MS = 5_000; // chat open and recently active
+const LIVE_SLOW_POLL_MS = 15_000;
+const LIVE_RECENT_MS = 3 * 60 * 1000;
+const TEAM_NOTICE = "🔔 Our team has been notified and may join this chat to help you personally.";
+
+type LiveState = {
+    id: string; // conversation id (UUID)
+    watched: boolean; // the server is sharing this chat with the team
+    activeAt: number; // last activity (ms); checking stops after LIVE_IDLE_MS
+    cursor: string; // id of the last team message received
+};
+
+const newConversationId = () => {
+    try {
+        if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+        const bytes = crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    } catch {
+        return "";
+    }
+};
+
+const freshLiveState = (): LiveState => ({ id: newConversationId(), watched: false, activeAt: 0, cursor: "" });
+
+const loadLiveState = (): LiveState => {
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(LIVE_STORAGE_KEY) ?? "null");
+        if (typeof saved?.id === "string" && /^[0-9a-f-]{36}$/.test(saved.id)) {
+            return {
+                id: saved.id,
+                watched: saved.watched === true,
+                activeAt: typeof saved.activeAt === "number" ? saved.activeAt : 0,
+                cursor: typeof saved.cursor === "string" ? saved.cursor : "",
+            };
+        }
+    } catch {
+        // Storage unavailable or corrupt - start fresh.
+    }
+    return freshLiveState();
+};
+
+const saveLiveState = (state: LiveState) => {
+    try {
+        sessionStorage.setItem(LIVE_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+        // Storage unavailable - live replies just won't survive a reload.
+    }
+};
+
+const isLiveActive = (state: LiveState, now = Date.now()) => state.watched && now - state.activeAt < LIVE_IDLE_MS;
+
+type LivePoll = { messages: { id: string; text: string; at: string }[]; human: boolean; watching: boolean };
+
+const pollLive = async (state: LiveState, signal: AbortSignal): Promise<LivePoll | null> => {
+    const response = await fetch(LIVE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ c: state.id, after: state.cursor }),
+        signal,
+    });
+    if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) return null;
+    const data = await response.json();
+    if (!Array.isArray(data?.messages)) return null;
+    return {
+        messages: data.messages.filter((m: unknown) => typeof (m as { id?: unknown })?.id === "string" && typeof (m as { text?: unknown })?.text === "string"),
+        human: data.human === true,
+        watching: data.watching !== false,
+    };
+};
+
+// What the AI sees: team replies are labelled, notes are left out.
+const toApiHistory = (history: Message[]) =>
+    history
+        .filter((m) => m.role !== "note")
+        .slice(-CHAT_HISTORY_LIMIT)
+        .map(({ role, content }) =>
+            role === "team" ? { role: "assistant", content: `[Appfinity team] ${content}` } : { role, content },
+        );
+
 const GREETING =
     "👋 Hi! I'm the AI assistant for Appfinity AI Studio. Ask me about our services, products or your project idea — or anything about AI and technology. How can I help?";
 
@@ -68,11 +161,17 @@ const loadSavedMessages = (): Message[] => {
     try {
         const saved = JSON.parse(sessionStorage.getItem(CHAT_STORAGE_KEY) ?? "null");
         if (Array.isArray(saved) && saved.length > 0) {
-            const messages = saved
-                .filter((m) => (m?.role === "user" || m?.role === "assistant") && typeof m?.content === "string" && m.content)
+            const messages: Message[] = saved
+                .filter((m) => MESSAGE_ROLES.has(m?.role) && typeof m?.content === "string" && m.content)
                 .map((m) => {
                     const timestamp = new Date(m.timestamp);
-                    return { role: m.role, content: m.content, timestamp: isNaN(timestamp.getTime()) ? new Date() : timestamp };
+                    return {
+                        role: m.role,
+                        content: m.content,
+                        timestamp: isNaN(timestamp.getTime()) ? new Date() : timestamp,
+                        ...(typeof m.liveId === "string" ? { liveId: m.liveId } : {}),
+                        ...(m.sentToTeam === true ? { sentToTeam: true } : {}),
+                    };
                 });
             if (messages.length > 0) return messages;
         }
@@ -97,19 +196,31 @@ class ChatRequestError extends Error {
 }
 
 // Streams the assistant's reply, calling onText with the full text received so far.
-const streamAIReply = async (history: Message[], signal: AbortSignal, onText: (text: string) => void) => {
+// `live` is the server's X-Chat-Live header: "watch" (the team can join) or "human" (the message
+// went to the team member who is answering; there is no AI reply).
+const streamAIReply = async (
+    history: Message[],
+    live: LiveState,
+    signal: AbortSignal,
+    onText: (text: string) => void,
+): Promise<{ text: string; live: string }> => {
     const response = await fetch(CHAT_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            messages: history.slice(-CHAT_HISTORY_LIMIT).map(({ role, content }) => ({ role, content })),
+            messages: toApiHistory(history),
+            ...(live.id ? { conversationId: live.id } : {}),
+            ...(live.watched ? { live: true } : {}),
         }),
         signal,
     });
     // Without the function deployed, the SPA fallback answers with HTML, so check the type too.
-    if (!response.ok || !response.body || !response.headers.get("content-type")?.startsWith("text/plain")) {
+    if (!response.ok || !response.headers.get("content-type")?.startsWith("text/plain")) {
         throw new ChatRequestError(response.status);
     }
+    const liveHeader = response.headers.get("x-chat-live") ?? "";
+    if (liveHeader === "human") return { text: "", live: liveHeader };
+    if (!response.body) throw new ChatRequestError(response.status);
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -122,7 +233,7 @@ const streamAIReply = async (history: Message[], signal: AbortSignal, onText: (t
     }
     text += decoder.decode();
     onText(text);
-    return text.trim();
+    return { text: text.trim(), live: liveHeader };
 };
 
 // ---- Rule-based fallback (used only when the AI assistant is unavailable) ----
@@ -430,9 +541,14 @@ export const AIChatbot = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [streaming, setStreaming] = useState(false);
     const [conversation, setConversation] = useState<ConversationState>({ stage: "default" });
+    const [live, setLive] = useState<LiveState>(loadLiveState);
+    const [teamHere, setTeamHere] = useState(false);
+    const [unread, setUnread] = useState(0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesRef = useRef(messages);
     const requestRef = useRef<AbortController | null>(null);
+    const liveRef = useRef(live);
+    const isOpenRef = useRef(isOpen);
 
     useEffect(() => {
         messagesRef.current = messages;
@@ -442,8 +558,108 @@ export const AIChatbot = () => {
 
     useEffect(() => () => requestRef.current?.abort(), []);
 
+    useEffect(() => {
+        liveRef.current = live;
+        saveLiveState(live);
+    }, [live]);
+
+    useEffect(() => {
+        isOpenRef.current = isOpen;
+        if (isOpen) setUnread(0);
+    }, [isOpen]);
+
+    // Checks for replies from the team while this chat is shared with them.
+    useEffect(() => {
+        if (!live.id || !live.watched) return;
+        let stopped = false;
+        let waitingForVisible = false;
+        let timer: number | undefined;
+        let controller: AbortController | null = null;
+
+        const schedule = (delay?: number) => {
+            if (stopped) return;
+            const state = liveRef.current;
+            const now = Date.now();
+            if (!isLiveActive(state, now)) {
+                setTeamHere(false);
+                return;
+            }
+            const fast = isOpenRef.current && now - state.activeAt < LIVE_RECENT_MS;
+            timer = window.setTimeout(tick, delay ?? (fast ? LIVE_FAST_POLL_MS : LIVE_SLOW_POLL_MS));
+        };
+
+        const tick = async () => {
+            if (stopped) return;
+            if (document.visibilityState === "hidden") {
+                waitingForVisible = true;
+                return;
+            }
+            // Never insert a team message while an AI reply is streaming into the last bubble.
+            if (requestRef.current) return schedule();
+
+            controller = new AbortController();
+            const abortTimer = window.setTimeout(() => controller?.abort(), 10_000);
+            try {
+                const result = await pollLive(liveRef.current, controller.signal);
+                if (stopped || !result) return;
+                setTeamHere(result.human);
+                const known = new Set(messagesRef.current.map((m) => m.liveId).filter(Boolean));
+                const fresh = result.messages.filter((m) => !known.has(m.id));
+                if (fresh.length > 0) {
+                    setMessages((prev) => [
+                        ...prev,
+                        ...fresh.map((m): Message => {
+                            const at = new Date(m.at);
+                            return { role: "team", content: m.text, timestamp: isNaN(at.getTime()) ? new Date() : at, liveId: m.id };
+                        }),
+                    ]);
+                    if (!isOpenRef.current) setUnread((count) => count + fresh.length);
+                }
+                const last = result.messages[result.messages.length - 1];
+                const next: LiveState = {
+                    ...liveRef.current,
+                    cursor: last ? last.id : liveRef.current.cursor,
+                    activeAt: fresh.length > 0 ? Date.now() : liveRef.current.activeAt,
+                    watched: result.watching,
+                };
+                liveRef.current = next;
+                setLive(next);
+            } catch {
+                // Network blip - try again on the next check.
+            } finally {
+                window.clearTimeout(abortTimer);
+                controller = null;
+                schedule();
+            }
+        };
+
+        const onVisibility = () => {
+            if (document.visibilityState === "visible" && waitingForVisible) {
+                waitingForVisible = false;
+                tick();
+            }
+        };
+        document.addEventListener("visibilitychange", onVisibility);
+        schedule(1_000);
+
+        return () => {
+            stopped = true;
+            window.clearTimeout(timer);
+            controller?.abort();
+            document.removeEventListener("visibilitychange", onVisibility);
+        };
+    }, [live.id, live.watched, live.activeAt, isOpen]);
+
+    const markLiveActivity = useCallback(() => {
+        const next = { ...liveRef.current, watched: true, activeAt: Date.now() };
+        liveRef.current = next;
+        setLive(next);
+    }, []);
+
     const appendAssistant = (content: string) =>
         setMessages((prev) => [...prev, { role: "assistant", content, timestamp: new Date() }]);
+
+    const appendNote = (content: string) => setMessages((prev) => [...prev, { role: "note", content, timestamp: new Date() }]);
 
     const sendMessage = async (raw: string) => {
         const text = raw.trim().slice(0, MAX_INPUT_CHARS);
@@ -459,9 +675,10 @@ export const AIChatbot = () => {
         requestRef.current = controller;
         const timeout = window.setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS);
         let started = false;
+        let announceTeam = false;
 
         try {
-            const reply = await streamAIReply(history, controller.signal, (partial) => {
+            const { text: reply, live: liveMode } = await streamAIReply(history, liveRef.current, controller.signal, (partial) => {
                 if (!partial.trim()) return;
                 if (!started) {
                     started = true;
@@ -471,6 +688,17 @@ export const AIChatbot = () => {
                     setMessages((prev) => [...prev.slice(0, -1), { ...prev[prev.length - 1], content: partial }]);
                 }
             });
+            if (liveMode === "human") {
+                // A team member is answering: the message went to them, not the AI.
+                setMessages((prev) => prev.map((m) => (m === userMessage ? { ...m, sentToTeam: true } : m)));
+                setTeamHere(true);
+                markLiveActivity();
+                return;
+            }
+            if (liveMode === "watch") {
+                announceTeam = !liveRef.current.watched;
+                markLiveActivity();
+            }
             if (!reply) throw new ChatRequestError(204);
             setConversation({ stage: "default" });
         } catch (error) {
@@ -498,6 +726,7 @@ export const AIChatbot = () => {
                 requestRef.current = null;
                 setStreaming(false);
                 setIsTyping(false);
+                if (announceTeam) appendNote(TEAM_NOTICE);
             }
         }
     };
@@ -514,6 +743,12 @@ export const AIChatbot = () => {
         setIsTyping(false);
         setConversation({ stage: "default" });
         setMessages([greetingMessage()]);
+        // A new chat is a new conversation: team replies to the old one won't appear here.
+        const fresh = freshLiveState();
+        liveRef.current = fresh;
+        setLive(fresh);
+        setTeamHere(false);
+        setUnread(0);
     };
 
     return (
@@ -523,10 +758,16 @@ export const AIChatbot = () => {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${isOpen ? "scale-0" : "scale-100"
                     }`}
-                aria-label="Open chat"
+                aria-label={unread > 0 ? `Open chat (${unread} new ${unread === 1 ? "message" : "messages"} from our team)` : "Open chat"}
             >
                 <MessageCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                {unread > 0 ? (
+                    <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[11px] font-semibold leading-5 text-center ring-2 ring-background">
+                        {unread > 9 ? "9+" : unread}
+                    </span>
+                ) : (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                )}
             </button>
 
             {/* Chat Window */}
@@ -539,13 +780,13 @@ export const AIChatbot = () => {
                 <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/5 to-accent/5 sm:rounded-t-2xl">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center">
-                            <Sparkles className="w-5 h-5 text-white" />
+                            {teamHere ? <UserRound className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
                         </div>
                         <div>
-                            <h3 className="font-semibold text-foreground">AI Assistant</h3>
+                            <h3 className="font-semibold text-foreground">{teamHere ? "Appfinity team" : "AI Assistant"}</h3>
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
                                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                Online now
+                                {teamHere ? "A team member is chatting with you" : "Online now"}
                             </p>
                         </div>
                     </div>
@@ -570,34 +811,58 @@ export const AIChatbot = () => {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4" aria-live="polite">
-                    {messages.map((message, index) => (
-                        <div
-                            key={index}
-                            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                        >
-                            <div
-                                className={`max-w-[85%] min-w-0 rounded-2xl px-4 py-3 ${message.role === "user"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-foreground"
-                                    }`}
-                            >
-                                {message.role === "assistant" ? (
-                                    <ChatMarkdown content={message.content} />
-                                ) : (
-                                    <p className="text-sm whitespace-pre-line leading-relaxed break-words">{message.content}</p>
-                                )}
-                                <p className="text-xs opacity-60 mt-1">
-                                    {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {messages.map((message, index) =>
+                        message.role === "note" ? (
+                            <div key={index} className="flex justify-center">
+                                <p className="max-w-[90%] text-xs text-muted-foreground text-center flex items-start gap-1.5 px-3 py-2 rounded-xl bg-muted/50">
+                                    <BellRing className="w-3.5 h-3.5 mt-px shrink-0 text-primary" aria-hidden="true" />
+                                    <span>{message.content.replace(/^🔔\s*/, "")}</span>
                                 </p>
                             </div>
-                        </div>
-                    ))}
+                        ) : (
+                            <div
+                                key={index}
+                                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                            >
+                                <div
+                                    className={`max-w-[85%] min-w-0 rounded-2xl px-4 py-3 ${message.role === "user"
+                                        ? "bg-primary text-primary-foreground"
+                                        : message.role === "team"
+                                            ? "bg-primary/10 text-foreground border border-primary/30"
+                                            : "bg-muted text-foreground"
+                                        }`}
+                                >
+                                    {message.role === "team" && (
+                                        <p className="text-xs font-semibold text-primary mb-1 flex items-center gap-1">
+                                            <UserRound className="w-3.5 h-3.5" aria-hidden="true" />
+                                            Appfinity team
+                                        </p>
+                                    )}
+                                    {message.role === "user" ? (
+                                        <p className="text-sm whitespace-pre-line leading-relaxed break-words">{message.content}</p>
+                                    ) : (
+                                        <ChatMarkdown content={message.content} />
+                                    )}
+                                    <p className="text-xs opacity-60 mt-1 flex items-center gap-1">
+                                        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                        {message.sentToTeam && (
+                                            <>
+                                                <span aria-hidden="true">·</span>
+                                                <Check className="w-3 h-3" aria-hidden="true" />
+                                                Sent to the team
+                                            </>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        ),
+                    )}
 
                     {isTyping && !streaming && (
                         <div className="flex justify-start">
                             <div className="bg-muted rounded-2xl px-4 py-3 flex items-center gap-2">
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-sm text-muted-foreground">Thinking...</span>
+                                <span className="text-sm text-muted-foreground">{teamHere ? "Sending..." : "Thinking..."}</span>
                             </div>
                         </div>
                     )}
