@@ -29,6 +29,14 @@ const TelegramIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const X_PROFILE_URL = "https://x.com/AppfinityDev";
+
+const XIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+  </svg>
+);
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const navigate = useNavigate();
@@ -63,16 +71,28 @@ export function Footer() {
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
               A technology studio focused on creating intelligent apps, web platforms, and automation-driven solutions.
             </p>
-            <a
-              href={TELEGRAM_CHANNEL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors duration-300 hover:border-[#229ED9]/60 hover:text-[#229ED9]"
-              aria-label="Follow Appfinity AI Studio on Telegram (opens in a new tab)"
-            >
-              <TelegramIcon className="h-5 w-5 shrink-0" />
-              Daily AI insights on Telegram
-            </a>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={TELEGRAM_CHANNEL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors duration-300 hover:border-[#229ED9]/60 hover:text-[#229ED9]"
+                aria-label="Follow Appfinity AI Studio on Telegram (opens in a new tab)"
+              >
+                <TelegramIcon className="h-5 w-5 shrink-0" />
+                Daily AI insights on Telegram
+              </a>
+              <a
+                href={X_PROFILE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-2 text-sm font-medium text-foreground transition-colors duration-300 hover:border-foreground/60"
+                aria-label="Follow Appfinity AI Studio on X (opens in a new tab)"
+              >
+                <XIcon className="h-4 w-4 shrink-0" />
+                Follow on X
+              </a>
+            </div>
           </div>
 
           {/* Company Links */}
