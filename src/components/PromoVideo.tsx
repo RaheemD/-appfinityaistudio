@@ -8,19 +8,8 @@ const VIDEO_SRC = "/media/fitnessmate-ad.mp4";
 const POSTER_SRC = "/media/fitnessmate-ad-poster.jpg";
 const APP_URL = "https://play.google.com/store/apps/details?id=app.netlify.fitnessmate.twa";
 
-const DISMISS_KEY = "appfinity:promo-video:v1";
-const DISMISS_MS = 24 * 60 * 60 * 1000; // closed = stays away for a day
 const SHOW_DELAY_MS = 2500; // let the page itself load first
 const HIDDEN_ON = ["/privacy", "/terms"];
-
-function wasDismissedRecently(): boolean {
-  try {
-    const at = Number(localStorage.getItem(DISMISS_KEY));
-    return Number.isFinite(at) && at > 0 && Date.now() - at < DISMISS_MS;
-  } catch {
-    return false;
-  }
-}
 
 function prefersLightweight(): boolean {
   try {
@@ -45,12 +34,10 @@ export function PromoVideo() {
   const hiddenHere = HIDDEN_ON.includes(pathname);
   const visible = mounted && !dismissed && !hiddenHere;
 
-  // Appear a moment after the first page load, unless it was closed recently.
+  // Appear a moment after every fresh load (new tab, new window or refresh).
+  // Closing it is remembered only in memory, so it stays closed while the
+  // visitor moves between pages and returns on the next load.
   useEffect(() => {
-    if (wasDismissedRecently()) {
-      setDismissed(true);
-      return;
-    }
     const timer = window.setTimeout(() => setMounted(true), SHOW_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, []);
@@ -113,11 +100,6 @@ export function PromoVideo() {
 
   const close = () => {
     videoRef.current?.pause();
-    try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    } catch {
-      // Private mode: it simply comes back on the next visit.
-    }
     setDismissed(true);
   };
 
